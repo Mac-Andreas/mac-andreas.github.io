@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>App · Mac-Andreas</title>
+<link rel="stylesheet" href="site/styles.css" />
+<script src="site/icons.js" defer></script>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <span class="eyebrow hero-eyebrow-top">★ Mac-Andreas · Est. 2026</span>
+    <div class="hero-brand">
+      <h1>Mac &nbsp;<span class="accent">Andreas</span></h1>
+      <p class="lede">Play San Andreas on macOS through CrossOver — native open.mp launcher, ported scripts, and setup guides.</p>
+      <div class="badges">
+        <span class="badge">Apps · Guides · Scripts</span>
+        <span class="badge">Apple Silicon</span>
+        <span class="badge">Open Source</span>
+      </div>
+    </div>
+  </div>
+  <div class="stencil" aria-hidden="true">MA</div>
+</header>
+
+<nav class="site-nav site-nav-sticky" aria-label="Site sections">
+  <a href="index.html#home"        class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-home"/></svg>Home</a>
+  <a href="index.html#apps"        class="site-nav-link active"><svg class="nav-ico" aria-hidden="true"><use href="#ico-apps"/></svg>Apps</a>
+  <a href="index.html#guides"      class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-guides"/></svg>Guides</a>
+  <a href="index.html#scripts"     class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-scripts"/></svg>Scripts</a>
+  <a href="index.html#dashboard"   class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-dashboard"/></svg>Dashboard</a>
+  <a href="index.html#garage"      class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-garage"/></svg>Garage</a>
+  <a href="index.html#discussions" class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-discussions"/></svg>Discussions</a>
+  <a href="index.html#privacy"     class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-privacy"/></svg>Privacy</a>
+  <a href="index.html#legal"       class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-legal"/></svg>Legal</a>
+</nav>
+
+<main>
+
+  <article class="app-detail">
+    <div class="detail-grid">
+      <!-- Main column -->
+      <div class="detail-main">
+        <header class="content-title-head">
+          <a href="index.html#apps" class="back">← Apps</a>
+          <span class="eyebrow" id="app-eyebrow">App</span>
+          <div class="app-title-row">
+            <div class="app-hero-icon" id="app-icon" aria-hidden="true"><!-- generated SVG glyph --></div>
+            <h1 id="app-title">Loading <span class="accent">…</span></h1>
+          </div>
+          <p class="page-tagline" id="app-tagline"></p>
+        </header>
+        <section class="chart-block">
+          <h2>About</h2>
+          <p id="about-text" class="muted-text">Loading description…</p>
+        </section>
+
+        <section class="chart-block">
+          <h2>Features</h2>
+          <ul id="features-list" class="feature-list">
+            <li class="muted-text">Loading…</li>
+          </ul>
+        </section>
+
+        <section class="chart-block">
+          <h2>Tools &amp; tech</h2>
+          <div id="tools-list" class="tag-row">
+            <span class="tag muted-text">Loading…</span>
+          </div>
+        </section>
+      </div>
+
+      <!-- Right sidebar -->
+      <aside class="detail-sidebar">
+        <div class="sidebar-card">
+          <a id="download-btn" class="dl-btn" href="#" target="_blank" rel="noopener">
+            <span class="dl-btn-icon">⬇</span>
+            <span class="dl-btn-text">
+              <strong>Download</strong>
+              <small id="dl-sub">Latest release</small>
+            </span>
+          </a>
+          <a id="repo-link" class="dl-btn dl-btn-ghost" href="#" target="_blank" rel="noopener">
+            <span class="dl-btn-icon">↗</span>
+            <span class="dl-btn-text"><strong>View on GitHub</strong></span>
+          </a>
+
+          <dl class="info-list">
+            <dt>Platform</dt>      <dd id="sb-platform">—</dd>
+            <dt>Min. macOS</dt>    <dd id="sb-macos">—</dd>
+            <dt>Latest version</dt><dd id="sb-version">—</dd>
+            <dt>Released</dt>      <dd id="sb-released">—</dd>
+            <dt>License</dt>       <dd id="sb-license">—</dd>
+            <dt>Stars</dt>         <dd id="sb-stars">—</dd>
+            <dt>Forks</dt>         <dd id="sb-forks">—</dd>
+            <dt>Created</dt>       <dd id="sb-created">—</dd>
+          </dl>
+        </div>
+      </aside>
+    </div>
+  </article>
+</main>
+
+<footer>
+  <p>
+    Community project. Not affiliated with Rockstar Games or Take-Two Interactive.
+  </p>
+  <p style="margin-top:6px;font-size:12px;opacity:0.7;">
+    Grand Theft Auto is a trademark of Take-Two Interactive Software, Inc.
+  </p>
+  <p class="footer-links">
+    <a href="index.html#privacy"><svg class="foot-ico" aria-hidden="true"><use href="#ico-privacy"/></svg>Privacy</a>
+    <a href="index.html#legal"><svg class="foot-ico" aria-hidden="true"><use href="#ico-legal"/></svg>Legal</a>
+    <a href="https://github.com/Mac-Andreas" target="_blank" rel="noopener"><svg class="foot-ico" aria-hidden="true"><use href="#ico-garage"/></svg>GitHub</a>
+  </p>
+</footer>
+
+<script src="site/config.js" defer></script>
+<script src="site/app-detail.js" defer></script>
+</body>
+</html>

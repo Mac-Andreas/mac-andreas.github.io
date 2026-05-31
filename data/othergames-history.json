@@ -1,0 +1,1 @@
+{"updated_at":"2026-05-31T06:45:59.508Z","note":"Hourly recorder for non-open.mp GTA multiplayer platforms. Currently RAGE:MP (GTA V); alt:V/FiveM/MTA have no browser-usable public count API.","sources":["ragemp"],"points":[{"t":"2026-05-31T06:00:00.000Z","sources":{"ragemp":{"servers":252,"players":18721,"maxslots":410059}}}]}

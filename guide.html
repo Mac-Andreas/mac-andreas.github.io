@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Guide · Mac-Andreas</title>
+<link rel="stylesheet" href="site/styles.css" />
+<script src="site/icons.js" defer></script>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <span class="eyebrow hero-eyebrow-top">★ Mac-Andreas · Est. 2026</span>
+    <div class="hero-brand">
+      <h1>Mac &nbsp;<span class="accent">Andreas</span></h1>
+      <p class="lede">Play San Andreas on macOS through CrossOver — native open.mp launcher, ported scripts, and setup guides.</p>
+      <div class="badges">
+        <span class="badge">Apps · Guides · Scripts</span>
+        <span class="badge">Apple Silicon</span>
+        <span class="badge">Open Source</span>
+      </div>
+    </div>
+  </div>
+  <div class="stencil" aria-hidden="true">MA</div>
+</header>
+
+<nav class="site-nav site-nav-sticky" aria-label="Site sections">
+  <a href="index.html#home"        class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-home"/></svg>Home</a>
+  <a href="index.html#apps"        class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-apps"/></svg>Apps</a>
+  <a href="index.html#guides"      class="site-nav-link active"><svg class="nav-ico" aria-hidden="true"><use href="#ico-guides"/></svg>Guides</a>
+  <a href="index.html#scripts"     class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-scripts"/></svg>Scripts</a>
+  <a href="index.html#dashboard"   class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-dashboard"/></svg>Dashboard</a>
+  <a href="index.html#garage"      class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-garage"/></svg>Garage</a>
+  <a href="index.html#discussions" class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-discussions"/></svg>Discussions</a>
+  <a href="index.html#privacy"     class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-privacy"/></svg>Privacy</a>
+  <a href="index.html#legal"       class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-legal"/></svg>Legal</a>
+</nav>
+
+<main>
+
+  <article class="guide-detail">
+    <div class="detail-grid">
+      <!-- Main column: title header + rendered guide content -->
+      <div class="detail-main">
+        <header class="content-title-head">
+          <a href="index.html#guides" class="back">← Guides</a>
+          <span class="eyebrow" id="guide-eyebrow">Tutorial</span>
+          <h1 id="guide-title">Loading <span class="accent">…</span></h1>
+          <p class="page-tagline" id="guide-tagline"></p>
+        </header>
+        <section class="chart-block guide-body" id="guide-body">
+          <p class="muted-text">Loading guide…</p>
+        </section>
+      </div>
+
+      <!-- Right sidebar: nav between tutorials + external CTA -->
+      <aside class="detail-sidebar">
+        <div class="sidebar-card">
+          <div id="guide-cta-slot">
+            <a id="guide-cta" class="dl-btn" href="#" target="_blank" rel="noopener">
+              <span class="dl-btn-icon">↗</span>
+              <span class="dl-btn-text"><strong>Open source</strong><small id="guide-cta-sub">—</small></span>
+            </a>
+          </div>
+
+          <dl class="info-list">
+            <dt>Series</dt>     <dd>Get started</dd>
+            <dt>Step</dt>       <dd id="sb-step">— of 3</dd>
+            <dt>Platform</dt>   <dd>macOS · Apple Silicon</dd>
+            <dt>Published</dt>  <dd id="sb-updated">—</dd>
+          </dl>
+
+          <div class="guide-pager">
+            <a id="prev-guide" class="dl-btn dl-btn-ghost" href="#">
+              <span class="dl-btn-icon">←</span>
+              <span class="dl-btn-text"><strong>Previous</strong><small id="prev-sub">—</small></span>
+            </a>
+            <a id="next-guide" class="dl-btn dl-btn-ghost" href="#">
+              <span class="dl-btn-icon">→</span>
+              <span class="dl-btn-text"><strong>Next</strong><small id="next-sub">—</small></span>
+            </a>
+          </div>
+        </div>
+      </aside>
+    </div>
+  </article>
+</main>
+
+<footer>
+  <p>
+    Community project. Not affiliated with Rockstar Games or Take-Two Interactive.
+  </p>
+  <p style="margin-top:6px;font-size:12px;opacity:0.7;">
+    Grand Theft Auto is a trademark of Take-Two Interactive Software, Inc.
+  </p>
+  <p class="footer-links">
+    <a href="index.html#privacy"><svg class="foot-ico" aria-hidden="true"><use href="#ico-privacy"/></svg>Privacy</a>
+    <a href="index.html#legal"><svg class="foot-ico" aria-hidden="true"><use href="#ico-legal"/></svg>Legal</a>
+    <a href="https://github.com/Mac-Andreas" target="_blank" rel="noopener"><svg class="foot-ico" aria-hidden="true"><use href="#ico-garage"/></svg>GitHub</a>
+  </p>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/marked@12/marked.min.js"></script>
+<script src="site/guide-detail.js"></script>
+</body>
+</html>

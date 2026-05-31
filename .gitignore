@@ -1,0 +1,54 @@
+# macOS
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# Editors / IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.cursor/
+.zed/
+
+# Node / build artifacts
+node_modules/
+dist/
+build/
+.cache/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+secrets.json
+config.local.js
+dashboard/config.local.js
+
+# SQL — schema/migrations kept local only, never tracked
+*.dump
+*.bak
+*.sqlite
+*.sqlite3
+*.db
+sql/
+supabase/.branches/
+supabase/.temp/
+
+# Misc
+.tmp/
+tmp/
+coverage/
+*.tsbuildinfo
+
+# Internal docs (local only)
+/docs/

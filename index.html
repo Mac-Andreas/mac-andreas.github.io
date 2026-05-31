@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Mac-Andreas · Native Mac tools for open.mp</title>
+<meta name="description" content="Native Mac ports, ASI patches, ported scripts, and tools for the open.mp / SA-MP community." />
+<link rel="stylesheet" href="site/styles.css?v=202605312348" />
+<script src="site/icons.js" defer></script>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-inner">
+    <span class="eyebrow hero-eyebrow-top">★ Mac-Andreas · Est. 2026</span>
+    <div class="hero-brand">
+      <h1>Mac &nbsp;<span class="accent">Andreas</span></h1>
+      <p class="lede">
+        Play San Andreas on macOS through CrossOver & online with native open.mp.
+      </p>
+      <div class="badges">
+        <span class="badge">Apps · Guides · Scripts</span>
+        <span class="badge">Apple Silicon</span>
+        <span class="badge">Open Source</span>
+      </div>
+    </div>
+  </div>
+  <div class="stencil" aria-hidden="true">MA</div>
+</header>
+
+<nav class="site-nav site-nav-sticky" aria-label="Sections">
+  <a href="#home"        class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-home"/></svg>Home</a>
+  <a href="#apps"        class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-apps"/></svg>Apps</a>
+  <a href="#guides"      class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-guides"/></svg>Guides</a>
+  <a href="#scripts"     class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-scripts"/></svg>Scripts</a>
+  <a href="#dashboard"   class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-dashboard"/></svg>Dashboard</a>
+  <a href="#signatures"  class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-scripts"/></svg>Signatures</a>
+  <a href="#garage"      class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-garage"/></svg>Garage</a>
+  <a href="#discussions" class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-discussions"/></svg>Discussions</a>
+  <a href="#privacy"     class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-privacy"/></svg>Privacy</a>
+  <a href="#legal"       class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-legal"/></svg>Legal</a>
+</nav>
+
+<main>
+
+  <!-- ===== Home (featured mix) ===== -->
+  <section id="home">
+    <div class="section-head">
+      <h2>Welcome to <span class="accent">San Andreas</span></h2>
+      <span class="meta">A quick tour</span>
+    </div>
+
+    <div class="home-grid">
+      <a href="#apps" class="home-card home-card-apps" data-route="apps">
+        <span class="home-tag">Apps</span>
+        <h3>macOS <span class="accent">Applications</span></h3>
+        <p class="home-summary">Native, Apple-Silicon ports of the open.mp toolchain.</p>
+        <div class="home-stat">
+          <strong id="home-apps-count">4</strong><small>shipping</small>
+        </div>
+        <span class="home-cta">Browse apps →</span>
+      </a>
+
+      <a href="#guides" class="home-card home-card-guides" data-route="guides">
+        <span class="home-tag">Guides</span>
+        <h3>Tutorials &amp; <span class="accent">how-tos</span></h3>
+        <p class="home-summary">Step-by-step setup, porting, and CrossOver workflow notes.</p>
+        <div class="home-stat">
+          <strong id="home-guides-count">4</strong><small>guides</small>
+        </div>
+        <span class="home-cta">Read guides →</span>
+      </a>
+
+      <a href="#scripts" class="home-card home-card-scripts" data-route="scripts">
+        <span class="home-tag">Scripts</span>
+        <h3>SAMP → <span class="accent">open.mp</span></h3>
+        <p class="home-summary">Filterscripts and gamemodes ported across.</p>
+        <div class="home-stat">
+          <strong id="home-scripts-count">—</strong><small>ports</small>
+        </div>
+        <span class="home-cta">Open scripts →</span>
+      </a>
+
+      <a href="#garage" class="home-card home-card-garage" data-route="garage">
+        <span class="home-tag">Garage</span>
+        <h3>The <span class="accent">toolchain</span></h3>
+        <p class="home-summary" id="home-repo-summary">Every open.mp tool we maintain on GitHub.</p>
+        <div class="home-stat">
+          <strong id="home-repos-count">—</strong><small>repos</small>
+        </div>
+        <span class="home-cta">See garage →</span>
+      </a>
+
+      <a href="#discussions" class="home-card home-card-disc" data-route="discussions">
+        <span class="home-tag">Discussions</span>
+        <h3>The <span class="accent">crew</span></h3>
+        <p class="home-summary" id="home-disc-summary">Recent threads on the community board.</p>
+        <div class="home-stat">
+          <strong id="home-disc-count">—</strong><small>threads</small>
+        </div>
+        <span class="home-cta">Join in →</span>
+      </a>
+
+      <a href="#dashboard" class="home-card home-card-dash" data-route="dashboard">
+        <span class="home-tag">Dashboard</span>
+        <h3>Live <span class="accent">servers</span></h3>
+        <p class="home-summary">Live open.mp &amp; SA-MP server and player counts.</p>
+        <div class="home-stat">
+          <strong id="home-players-count">—</strong><small>players online</small>
+        </div>
+        <span class="home-cta">Open dashboard →</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- ===== Apps ===== -->
+  <section id="apps">
+    <div class="section-head">
+      <h2>macOS <span class="accent">Applications</span></h2>
+      <span class="meta">Apple Silicon Native</span>
+    </div>
+    <div id="apps-grid"></div>
+    <p class="meta" id="apps-updated"></p>
+  </section>
+
+  <!-- ===== Guides (tutorials / how-tos) ===== -->
+  <section id="guides">
+    <div class="section-head">
+      <h2>Tutorials &amp; <span class="accent">Guides</span></h2>
+      <span class="meta">Get started · macOS</span>
+    </div>
+    <p class="section-intro">
+      Four short tutorials, in order, to go from a clean Mac to a running
+      open.mp server with a connected client — and a modern editing setup.
+    </p>
+
+    <div class="card-grid">
+      <a class="card guide-static-card" href="guide.html?id=1">
+        <span class="card-tag">Tutorial 01</span>
+        <h3>Set up an <span class="accent">open.mp server</span></h3>
+        <p class="card-summary">Spin up a local open.mp server on macOS and connect from the launcher.</p>
+        <span class="card-cta">Start →</span>
+      </a>
+      <a class="card guide-static-card" href="guide.html?id=2">
+        <span class="card-tag">Tutorial 02</span>
+        <h3>Install the <span class="accent">launcher</span></h3>
+        <p class="card-summary">Walks through the v1.6.3-arm.1 release of the open.mp Launcher for Apple silicon.</p>
+        <span class="card-cta">Install →</span>
+      </a>
+      <a class="card guide-static-card" href="guide.html?id=3">
+        <span class="card-tag">Tutorial 03</span>
+        <h3>CrossOver <span class="accent">setup</span></h3>
+        <p class="card-summary">Get the game running under CrossOver, downgrade to v1.0, fix the spinning-mouse bug.</p>
+        <span class="card-cta">Set up →</span>
+      </a>
+      <a class="card guide-static-card" href="guide.html?id=4">
+        <span class="card-tag">Tutorial 04</span>
+        <h3>open.mp Pawn in <span class="accent">VS Code</span></h3>
+        <p class="card-summary">A modern Pawn editing + compile workflow in VS Code on macOS — no Pawno, no Wine.</p>
+        <span class="card-cta">Set up →</span>
+      </a>
+    </div>
+  </section>
+
+  <!-- ===== Scripts (SA-MP -> open.mp pawn ports) ===== -->
+  <section id="scripts">
+    <div class="section-head">
+      <h2>SAMP &rarr; <span class="accent">open.mp</span></h2>
+      <span class="meta">Auto-featured · Tagged repos</span>
+    </div>
+    <p class="section-intro">
+      Filterscripts and gamemodes ported from the SA-MP API surface to
+      open.mp, maintained as open-source repositories under Mac-Andreas.
+      Drop them into <code>filterscripts/</code> or <code>gamemodes/</code>
+      and compile with the modern open.mp Pawn compiler. Each port carries
+      its own open-source <strong>LICENSE</strong> &mdash; original authors
+      are credited in the repository.
+    </p>
+    <div id="scripts-grid" class="card-grid"></div>
+  </section>
+
+  <!-- ===== Dashboard ===== -->
+  <!-- Live open.mp / SA-MP server analytics. Reads api.open.mp/servers and
+       geojs.io directly in the browser — no Supabase, no API key. Live snapshot
+       cached hourly; trends read data/server-history.json (hourly recorder). -->
+  <section id="dashboard">
+    <div class="section-head">
+      <h2>Usage <span class="accent">Dashboard</span>
+        <span class="live-pill" id="dash-live-pill"><span class="live-dot"></span>Live</span>
+      </h2>
+      <span class="meta">open.mp + SA-MP · Live snapshot from <code>api.open.mp</code></span>
+    </div>
+
+    <!-- "Is SA-MP dead?" verdict banner. Loading → answer reads "Wait for it…";
+         once data is in: >1 SA-MP player ⇒ "No.", else "Yes." -->
+    <div id="samp-verdict" class="samp-verdict" data-state="loading">
+      <div class="samp-verdict-main">
+        <span class="samp-verdict-q">Is SA-MP dead?</span>
+        <span class="samp-verdict-a" id="samp-verdict-a"><span class="verdict-wait">Wait for it…</span></span>
+      </div>
+      <div class="samp-verdict-sub" id="samp-verdict-sub">Counting live SA-MP players…</div>
+    </div>
+
+    <!-- Sub-tabs -->
+    <nav class="dash-tabs" role="tablist" id="dash-tabs">
+      <button class="dash-tab" role="tab" data-tab="live"      aria-selected="true">Live Servers</button>
+      <button class="dash-tab" role="tab" data-tab="trends"    aria-selected="false">Trends</button>
+      <button class="dash-tab" role="tab" data-tab="breakdown" aria-selected="false">Breakdown</button>
+      <button class="dash-tab" role="tab" data-tab="geography"  aria-selected="false">Geography</button>
+      <button class="dash-tab" role="tab" data-tab="othergames" aria-selected="false">Benchmarking</button>
+      <button class="dash-tab" role="tab" data-tab="sources"    aria-selected="false">Sources</button>
+    </nav>
+
+    <div id="dash-panels"></div>
+  </section>
+
+  <!-- ===== Signatures / Embed builder (BBCode, client-side) ===== -->
+  <section id="signatures">
+    <div class="section-head">
+      <h2>Forum <span class="accent">Signatures</span></h2>
+      <span class="meta">BBCode · MyBB-ready · Copy &amp; paste</span>
+    </div>
+    <p class="section-intro">
+      Show off the scene in your forum signature. Pick a style, copy the
+      <strong>BBCode</strong>, and paste it into your MyBB (or any BBCode forum)
+      signature box. Numbers are baked in live when you copy. Every signature ends
+      with a <em>View more →</em> link that opens the dashboard in a new tab.
+    </p>
+    <div id="sig-app"></div>
+  </section>
+
+  <!-- ===== Garage (topic-tagged repos) ===== -->
+  <section id="garage">
+    <div class="section-head">
+      <h2>The <span class="accent">Garage</span></h2>
+      <span class="meta" id="garage-meta">All repositories · github.com/Mac-Andreas</span>
+    </div>
+    <div id="repos-grid">
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+    </div>
+  </section>
+
+  <!-- ===== Discussions ===== -->
+  <section id="discussions">
+    <div class="section-head">
+      <h2>The <span class="accent">Crew</span></h2>
+      <a id="discussions-cta" class="meta" href="https://github.com/Mac-Andreas/open.mp-Qawno-Silicon/discussions" target="_blank" rel="noopener">View all on GitHub ↗</a>
+    </div>
+    <div id="discussions-list">
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+      <div class="skeleton"></div>
+    </div>
+  </section>
+
+  <!-- ===== Privacy ===== -->
+  <section id="privacy">
+    <div class="section-head">
+      <h2>Privacy <span class="accent">Policy</span></h2>
+      <span class="meta">No tracking · No accounts</span>
+    </div>
+
+    <div class="legal-grid">
+      <article class="legal-card">
+        <div class="legal-card-num">01</div>
+        <div class="legal-card-tag">No telemetry</div>
+        <h2>We don't track you.</h2>
+        <p>This site collects no analytics, sets no tracking cookies, and has no accounts or logins. There is no usage telemetry and no backend database of visitors.</p>
+      </article>
+
+      <article class="legal-card">
+        <div class="legal-card-num">02</div>
+        <div class="legal-card-tag">Dashboard data</div>
+        <h2>Public server data only.</h2>
+        <p>The dashboard reads the public open.mp server list (<code>api.open.mp</code>) and geolocates server IPs via geojs.io — both in your browser. It's about game servers, not you. Nothing about your visit is stored.</p>
+      </article>
+
+      <article class="legal-card">
+        <div class="legal-card-num">03</div>
+        <div class="legal-card-tag">Third parties</div>
+        <h2>What your browser fetches.</h2>
+        <p>Pages pull a few public APIs directly (GitHub for repos/releases, open.mp for servers, geojs.io for map locations) and assets from jsDelivr/CARTO CDNs. Those providers may log requests at the network layer; Mac-Andreas neither receives nor correlates that data.</p>
+      </article>
+
+      <article class="legal-card">
+        <div class="legal-card-num">04</div>
+        <div class="legal-card-tag">Hosting</div>
+        <h2>Static on GitHub Pages.</h2>
+        <p>The whole site is static files on GitHub Pages — no server-side code, no logins, no database we control. GitHub may log basic request metadata per its own privacy policy.</p>
+      </article>
+    </div>
+  </section>
+
+  <!-- ===== Legal ===== -->
+  <section id="legal">
+    <div class="section-head">
+      <h2>Legal <span class="accent">Disclaimer</span></h2>
+      <span class="meta">Mission Briefing</span>
+    </div>
+
+    <p class="legal-intro">
+      Plain-English version of the legal posture. Source repos each carry their own LICENSE — those govern code reuse. Below covers the site, the brand, and the relationship to existing IP holders.
+    </p>
+
+    <div class="legal-grid">
+      <article class="legal-card">
+        <div class="legal-card-num">01</div>
+        <div class="legal-card-tag">Affiliation</div>
+        <h2>Independent community project.</h2>
+        <p><strong>Not affiliated with</strong> Rockstar Games, Take-Two Interactive, the SA-MP team, or the open.mp project maintainers. Product names and brands belong to their owners.</p>
+      </article>
+
+      <article class="legal-card">
+        <div class="legal-card-num">02</div>
+        <div class="legal-card-tag">Trademark</div>
+        <h2>GTA is Take-Two's.</h2>
+        <p><em>Grand Theft Auto</em>, <em>San Andreas</em>, and related marks are registered trademarks of Take-Two Interactive Software, Inc. The visual style here is a <strong>tribute</strong>. No game assets or code from any GTA title is distributed.</p>
+      </article>
+
+      <article class="legal-card">
+        <div class="legal-card-num">03</div>
+        <div class="legal-card-tag">Warranty</div>
+        <h2>Provided "as is".</h2>
+        <p>Software ships <strong>without warranty</strong>, express or implied. Authors are not liable for damages from use. Per-repo licences (MIT, GPL, etc.) extend this for code reuse — read the LICENSE in each repository.</p>
+      </article>
+
+      <article class="legal-card">
+        <div class="legal-card-num">04</div>
+        <div class="legal-card-tag">Guides &amp; tools</div>
+        <h2>Use your own copy.</h2>
+        <p>The <a href="#guides">guides</a> assume a <strong>legally-owned copy</strong> of GTA: San Andreas. Every third-party tool referenced (CrossOver, Rockstar Games Launcher, SA-MP, downgrade tools) is linked to its official source. No Take-Two binaries, game assets, or copyrighted code are hosted or redistributed here.</p>
+      </article>
+
+      <article class="legal-card">
+        <div class="legal-card-num">05</div>
+        <div class="legal-card-tag">Hosting</div>
+        <h2>Open web stack.</h2>
+        <p>Static site on <strong>GitHub Pages</strong>; live data from public APIs (<strong>open.mp</strong>, <strong>GitHub</strong>, <strong>geojs.io</strong>). Each has its own privacy practices and may log request metadata at the network layer. Mac-Andreas does not sell, share, or correlate that data.</p>
+      </article>
+
+      <article class="legal-card legal-card-cta">
+        <div class="legal-card-num">06</div>
+        <div class="legal-card-tag">Contact</div>
+        <h2>Takedowns &amp; concerns.</h2>
+        <p>Trademark, copyright, or other legal concerns: open an issue or start a discussion. <strong>Good-faith takedown requests will be honoured.</strong></p>
+        <div class="legal-card-actions">
+          <a class="dl-btn" href="https://github.com/Mac-Andreas" target="_blank" rel="noopener">
+            <svg class="dl-btn-ico" aria-hidden="true"><use href="#ico-garage"/></svg>
+            <span class="dl-btn-text"><strong>Open an issue</strong><small>github.com/Mac-Andreas</small></span>
+          </a>
+          <a class="dl-btn dl-btn-ghost" href="https://github.com/Mac-Andreas/open.mp-Qawno-Silicon/discussions" target="_blank" rel="noopener">
+            <svg class="dl-btn-ico" aria-hidden="true"><use href="#ico-discussions"/></svg>
+            <span class="dl-btn-text"><strong>Discussions</strong><small>Community Q&amp;A</small></span>
+          </a>
+        </div>
+      </article>
+    </div>
+  </section>
+
+</main>
+
+<footer>
+  <p>
+    Community project. Not affiliated with Rockstar Games or Take-Two Interactive.
+  </p>
+  <p style="margin-top:6px;font-size:12px;opacity:0.7;">
+    Grand Theft Auto is a trademark of Take-Two Interactive Software, Inc.
+  </p>
+  <p class="footer-links">
+    <a href="#privacy"><svg class="foot-ico" aria-hidden="true"><use href="#ico-privacy"/></svg>Privacy</a>
+    <a href="#legal"><svg class="foot-ico" aria-hidden="true"><use href="#ico-legal"/></svg>Legal</a>
+    <a href="https://github.com/Mac-Andreas" target="_blank" rel="noopener"><svg class="foot-ico" aria-hidden="true"><use href="#ico-garage"/></svg>GitHub</a>
+  </p>
+</footer>
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css" />
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" defer></script>
+<script src="site/config.js" defer></script>
+<script src="site/apps.js" defer></script>
+<script src="site/servers.js?v=202605312348" defer></script>
+<script src="site/signatures.js" defer></script>
+<script src="site/repos.js" defer></script>
+<script src="site/discussions.js" defer></script>
+<script src="site/scripts.js" defer></script>
+<script src="site/section-nav.js?v=202605312348" defer></script>
+</body>
+</html>

@@ -3,9 +3,15 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
+<!-- Always revalidate index.html so a new asset cache-buster (?v=) is picked up
+     on a normal reload — without this the browser may serve a stale index.html
+     that still points at the old ?v=, needing a hard refresh (Cmd+Shift+R). -->
+<meta http-equiv="Cache-Control" content="no-cache, must-revalidate" />
+<meta http-equiv="Pragma" content="no-cache" />
+<meta http-equiv="Expires" content="0" />
 <title>Mac-Andreas · Native Mac tools for open.mp</title>
 <meta name="description" content="Native Mac ports, ASI patches, ported scripts, and tools for the open.mp / SA-MP community." />
-<link rel="stylesheet" href="site/styles.css?v=202606021505" />
+<link rel="stylesheet" href="site/styles.css?v=202606021510" />
 <script src="site/icons.js" defer></script>
 </head>
 <body>
@@ -367,10 +373,10 @@
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" defer></script>
 <script src="site/config.js" defer></script>
 <script src="site/apps.js" defer></script>
-<script src="site/servers.js?v=202606021505" defer></script>
+<script src="site/servers.js?v=202606021510" defer></script>
 <script src="site/repos.js" defer></script>
 <script src="site/discussions.js" defer></script>
 <script src="site/scripts.js" defer></script>
-<script src="site/section-nav.js?v=202606021505" defer></script>
+<script src="site/section-nav.js?v=202606021510" defer></script>
 </body>
 </html>

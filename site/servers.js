@@ -145,7 +145,15 @@
   // ── chart factory ─────────────────────────────────────────────────────────
   function destroy(id) { if (_charts[id]) { _charts[id].destroy(); delete _charts[id]; } }
   const tooltip = { backgroundColor: C.bg, borderColor: '#3E3E4D', borderWidth: 1, titleColor: C.text, bodyColor: C.sand, padding: 10 };
-  const baseOpts = { responsive: true, maintainAspectRatio: false, animation: { duration: 350 }, plugins: { legend: { display: false }, tooltip } };
+  // devicePixelRatio:null lets Chart.js read the LIVE window.devicePixelRatio on
+  // each resize — so browser zoom (which changes DPR) re-rasterizes crisply
+  // instead of leaving a stale canvas whose hit-testing maps the cursor to the
+  // wrong data point. A DPR watcher below triggers that resize on zoom.
+  const baseOpts = {
+    responsive: true, maintainAspectRatio: false, devicePixelRatio: null,
+    animation: { duration: 350 },
+    plugins: { legend: { display: false }, tooltip },
+  };
   const DL = (typeof ChartDataLabels !== 'undefined') ? ChartDataLabels : null; // datalabels plugin
 
   function make(id, config) {
@@ -155,6 +163,29 @@
     _charts[id] = new Chart(el.getContext('2d'), config);
     return _charts[id];
   }
+
+  // Browser zoom changes window.devicePixelRatio but fires no resize event, which
+  // is what left Chart.js canvases at a stale scale (tooltip/crosshair landing on
+  // the wrong point + a momentary glitch). Watch DPR via a matchMedia query that
+  // re-arms after every change, and resize all live charts when it shifts.
+  (function watchZoom() {
+    let last = window.devicePixelRatio || 1;
+    const resizeAll = () => { for (const id in _charts) { try { _charts[id].resize(); } catch {} } };
+    const arm = () => {
+      const mq = matchMedia(`(resolution: ${last}dppx)`);
+      const onChange = () => {
+        const now = window.devicePixelRatio || 1;
+        if (now !== last) { last = now; resizeAll(); }
+        arm(); // re-arm for the new ratio
+      };
+      mq.addEventListener ? mq.addEventListener('change', onChange, { once: true })
+                          : mq.addListener(onChange);
+    };
+    arm();
+    // Belt-and-braces: a debounced window resize also re-syncs (covers zoom paths
+    // that DO emit resize, and normal layout reflows).
+    let t; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(resizeAll, 150); });
+  })();
 
   // Bar with value labels at the end of each bar.
   function barChart(id, labels, data, color = C.ember, horizontal = false, fmtLabel) {

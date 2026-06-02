@@ -1010,16 +1010,17 @@
       el.innerHTML = `
         <p class="dash-note">
           <strong>Online benchmarking</strong> — how the live San Andreas player base
-          (open.mp + SA-MP) stacks up against other GTA multiplayer platforms, recorded
-          hourly (these platforms’ public APIs aren’t reachable directly from a browser).
-          <strong>RAGE:MP</strong> (GTA&nbsp;V), <strong>MTA:SA</strong>
-          (GTA&nbsp;San&nbsp;Andreas) and <strong>VC:MP</strong> (Vice&nbsp;City) report
-          live players and servers. alt:V&nbsp;/&nbsp;FiveM probes run hourly and light up
-          automatically if their APIs return. GTA&nbsp;III&nbsp;/&nbsp;IV have no live master.
+          stacks up against other GTA multiplayer platforms, recorded hourly (these
+          platforms’ public APIs aren’t reachable directly from a browser).
+          The <strong>San&nbsp;Andreas</strong> bar stacks every San Andreas platform —
+          <strong>SA-MP</strong> + <strong>open.mp</strong> + <strong>MTA:SA</strong> —
+          while <strong>RAGE:MP</strong> (GTA&nbsp;V) and <strong>VC:MP</strong>
+          (Vice&nbsp;City) get their own bars. alt:V&nbsp;/&nbsp;FiveM probes run hourly and
+          light up automatically if their APIs return. GTA&nbsp;III&nbsp;/&nbsp;IV have no
+          live master.
         </p>
-        <div class="kpi-row" id="og-kpis"></div>
         <div class="chart-panel">
-          <h3>Live player benchmark <span class="dim">across platforms</span> ${tip('Current concurrent players per platform. The San Andreas bar is stacked: SA-MP (orange) + open.mp (purple), live from api.open.mp. Other platforms (RAGE:MP, MTA:SA, VC:MP) come from their public APIs, refreshed hourly, each in its own colour. The number at the end of each bar is that platform’s total. Different games — shown for scale.')}</h3>
+          <h3>Live player benchmark <span class="dim">across platforms</span> ${tip('Current concurrent players per platform. The San Andreas bar stacks SA-MP (orange) + open.mp (purple) + MTA:SA (amber). RAGE:MP and VC:MP get their own bars in their own colour. The number at the end of each bar is that game’s total players. Different games — shown for scale.')}</h3>
           ${canvas('og-bench', 240)}
         </div>
         <div class="chart-panel" style="margin-top:16px">
@@ -1038,48 +1039,51 @@
     }
   }
 
+  // Most-recent NON-NULL value of a field for a platform, scanning the history
+  // backwards — so a single failed hourly scrape (which writes null/omits the key)
+  // doesn't make a platform vanish from the benchmark.
+  function latestVal(key, field) {
+    const og = _otherHist || [];
+    for (let i = og.length - 1; i >= 0; i--) {
+      const v = og[i].sources?.[key]?.[field];
+      if (v != null) return v;
+    }
+    return null;
+  }
+
   function drawOtherGames() {
     const hist = _otherHist || [];
     const note = document.getElementById('og-note');
-    const kpiEl = document.getElementById('og-kpis');
-    const latest = hist.length ? hist[hist.length - 1].sources || {} : {};
-    // Non-SA platforms in the recorder's latest snapshot. Some expose a player
-    // count (RAGE:MP), others only a reliable server count (MTA:SA — its binary
-    // master's player field couldn't be verified, so players is null there).
-    const recKeys     = Object.keys(OG_PLATFORMS).filter(k => k !== 'samp' && k !== 'omp' && latest[k]);
-    const playerKeys  = recKeys.filter(k => latest[k].players != null);
-    const serverKeys  = recKeys.filter(k => latest[k].servers != null);
 
     // Live San Andreas baseline (open.mp + SA-MP) from the current server list.
     const sa = _servers ? totals(_servers) : null;
+    // MTA:SA is ALSO a San Andreas platform → it stacks into the San Andreas bar.
+    const mtaPlayers = latestVal('mtasa', 'players') || 0;
 
-    // ── KPIs: SA-MP / open.mp split + each recorded other platform ───────────
-    const cards = [];
-    if (sa) {
-      cards.push(kpiVal('ember',  'SA-MP players (live)',   fmt(sa.sampPlayers)));
-      cards.push(kpiVal('purple', 'open.mp players (live)', fmt(sa.ompPlayers)));
-    }
-    playerKeys.forEach(k => cards.push(kpiVal('info', `${OG_PLATFORMS[k].label} players`, fmt(latest[k].players))));
-    // Server-only platforms (e.g. MTA:SA) get a server-count KPI instead.
-    serverKeys.filter(k => latest[k].players == null)
-      .forEach(k => cards.push(kpiVal('good', `${OG_PLATFORMS[k].label} servers`, fmt(latest[k].servers))));
-    cards.push(kpiVal('sand', 'Snapshots recorded', fmt(hist.length)));
-    if (kpiEl) kpiEl.innerHTML = cards.join('') || '<div class="kpi-card"><div class="kpi-value">—</div></div>';
+    // ── Benchmark bar (PLAYERS only) ──────────────────────────────────────────
+    // San Andreas row stacks SA-MP + open.mp + MTA:SA. Every other GAME (RAGE:MP,
+    // VC:MP, …) is its own single-segment row in its own colour. Each platform's
+    // value is its most-recent non-null player count.
+    const otherGameKeys = Object.keys(OG_PLATFORMS)
+      .filter(k => !['samp', 'omp', 'mtasa'].includes(k))   // SA platforms handled above
+      .filter(k => (latestVal(k, 'players') || 0) > 0);
 
-    // ── Stacked benchmark: San Andreas (SA-MP+open.mp) vs each other platform ─
-    // One category per platform row. San Andreas gets two stacked segments
-    // (SA-MP orange + open.mp purple); every other platform is one segment.
-    const cats = (sa ? ['San Andreas'] : []).concat(playerKeys.map(k => `${OG_PLATFORMS[k].label} · ${OG_PLATFORMS[k].game}`));
+    const cats = [];
+    if (sa) cats.push('San Andreas');
+    otherGameKeys.forEach(k => cats.push(`${OG_PLATFORMS[k].label} · ${OG_PLATFORMS[k].game}`));
+
     if (cats.length) {
       const at = (cat, val) => cats.map(c => (c === cat ? val : 0));
       const datasets = [];
       if (sa) {
-        datasets.push({ label: OG_PLATFORMS.samp.label, color: OG_PLATFORMS.samp.color, data: at('San Andreas', sa.sampPlayers) });
-        datasets.push({ label: OG_PLATFORMS.omp.label,  color: OG_PLATFORMS.omp.color,  data: at('San Andreas', sa.ompPlayers) });
+        datasets.push({ label: OG_PLATFORMS.samp.label,  color: OG_PLATFORMS.samp.color,  data: at('San Andreas', sa.sampPlayers) });
+        datasets.push({ label: OG_PLATFORMS.omp.label,   color: OG_PLATFORMS.omp.color,   data: at('San Andreas', sa.ompPlayers) });
+        if (mtaPlayers > 0)
+          datasets.push({ label: OG_PLATFORMS.mtasa.label, color: OG_PLATFORMS.mtasa.color, data: at('San Andreas', mtaPlayers) });
       }
-      playerKeys.forEach(k => {
+      otherGameKeys.forEach(k => {
         const cat = `${OG_PLATFORMS[k].label} · ${OG_PLATFORMS[k].game}`;
-        datasets.push({ label: OG_PLATFORMS[k].label, color: OG_PLATFORMS[k].color, data: at(cat, latest[k].players) });
+        datasets.push({ label: OG_PLATFORMS[k].label, color: OG_PLATFORMS[k].color, data: at(cat, latestVal(k, 'players')) });
       });
       stackedBar('og-bench', cats, datasets);
     } else {

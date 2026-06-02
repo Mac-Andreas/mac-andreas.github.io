@@ -1020,7 +1020,7 @@
           live master.
         </p>
         <div class="chart-panel">
-          <h3>Live player benchmark <span class="dim">across platforms</span> ${tip('Current concurrent players per platform. The San Andreas bar stacks SA-MP (orange) + open.mp (purple) + MTA:SA (amber). RAGE:MP and VC:MP get their own bars in their own colour. The number at the end of each bar is that game’s total players. Different games — shown for scale.')}</h3>
+          <h3>Live player benchmark <span class="dim">across platforms · last hour</span> ${tip('Concurrent players per platform from the most recent hourly snapshot. The San Andreas bar stacks SA-MP (orange) + open.mp (purple) + MTA:SA (amber). RAGE:MP and VC:MP get their own bars in their own colour. The number at the end of each bar is that game’s total players. Different games — shown for scale.')}</h3>
           ${canvas('og-bench', 240)}
         </div>
         <div class="chart-panel" style="margin-top:16px">

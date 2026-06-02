@@ -13,7 +13,7 @@
 //   • Breakdown    — distributions + summary cards
 //   • Geography    — borderless dark map (all / open.mp / SA-MP toggle)
 //
-// Colour convention (per request): open.mp = PURPLE, SA-MP = cyan.
+// Colour convention (per request): open.mp = PURPLE, SA-MP = ORANGE.
 (() => {
   const OMP_API = 'https://api.open.mp/servers';
   const HISTORY_URL = 'data/server-history.json';
@@ -26,19 +26,18 @@
   // api.open.mp on every visit. (The Actions recorder also runs hourly.)
   const POLL_MS = 60 * 60 * 1000;
 
+  // "All" first — it's the default range (full 2010→today archive).
   const RANGES = [
+    { key: 'all',  label: 'All',       days: 365 * 50 }, // full archive: SACNR 2010 → today
     { key: 'day',  label: 'Daily',     days: 1 },
     { key: 'week', label: 'Weekly',    days: 7 },   // rolling 7 days (Mon–Sun framing in note)
     { key: 'mo',   label: 'Monthly',   days: 30 },
     { key: 'qtr',  label: 'Quarterly', days: 91 },
     { key: 'half', label: 'Half-yr',   days: 182 },
     { key: 'yr',   label: 'Yearly',    days: 365 },
-    { key: '3yr',  label: '3 yr',      days: 365 * 3 },
-    { key: '5yr',  label: '5 yr',      days: 365 * 5 },
-    { key: 'all',  label: 'All',       days: 365 * 50 }, // full archive: SACNR 2010 → today
   ];
 
-  // Theme — mirrors site/styles.css. open.mp=purple, SA-MP=cyan (info).
+  // Theme — mirrors site/styles.css. open.mp=purple, SA-MP=orange (ember).
   const C = {
     bg: '#0C0E0A', panel: '#1A1E15', border: '#2F3623',
     text: '#EDE3C8', muted: '#98937A', sand: '#C9A86B',
@@ -57,16 +56,42 @@
   // Blue-family ramp for generic multi-slice charts (NO orange/purple).
   const BLUES  = ['#3B82F6', '#60A5FA', '#93C5FD', '#1D4ED8', '#2563EB', '#0EA5E9', '#38BDF8', '#0369A1'];
   // Purple ramp for open.mp-specific multi-slice charts (e.g. open.mp versions).
-  const PURPLES = ['#9B7FE8', '#B9A6F0', '#7C5BD6', '#6D4DC7', '#C9BCF5', '#5B3FB0'];
+  // Ordered DARK→LIGHT so "newest build" (first slice) is the deepest purple and
+  // older builds fade toward light grey-purple.
+  const PURPLES = ['#5B3FB0', '#6D4DC7', '#7C5BD6', '#9B7FE8', '#B9A6F0', '#C9BCF5', '#D8CFF0', '#E5DEF6'];
+  // Green→red ramp for "fill level" style charts (low utilisation = green/good,
+  // packed = red/bad). Six steps to match the capacity bands.
+  const GREEN_RED = ['#B4D862', '#9FCB4E', '#E0C04A', '#E8A13C', '#E0742C', '#C9442B'];
   const PALETTE = BLUES;  // default generic palette
 
   const tabsEl   = document.getElementById('dash-tabs');
   const panelsEl = document.getElementById('dash-panels');
   if (!tabsEl || !panelsEl) return;
 
+  // ── Embed mode (?embed=dashboard) ────────────────────────────────────────
+  // When embedded via the Embed tab's iframe snippet, strip the site chrome
+  // (hero/nav/footer) and show ONLY the #dashboard section, then pin a small
+  // "powered by Mac-Andreas" credit beneath it. The whole dashboard still works
+  // (tabs, live data) inside the iframe.
+  const EMBED = new URLSearchParams(location.search).has('embed');
+  if (EMBED) {
+    document.body.classList.add('embed-mode');
+    // Hide the Embed tab inside an embed (the snippet/preview is meaningless and
+    // its preview iframe would nest recursively).
+    const embedTabBtn = tabsEl.querySelector('[data-tab="embed"]');
+    if (embedTabBtn) embedTabBtn.style.display = 'none';
+    const dash = document.getElementById('dashboard');
+    if (dash && !document.querySelector('.embed-credit')) {
+      const credit = document.createElement('p');
+      credit.className = 'embed-credit';
+      credit.innerHTML = 'Live data · <a href="https://mac-andreas.github.io/#dashboard" target="_blank" rel="noopener">Mac-Andreas Usage Dashboard ↗</a>';
+      dash.appendChild(credit);
+    }
+  }
+
   // ── state ───────────────────────────────────────────────────────────────
   let _servers = null, _error = null, _activeTab = 'live', _pollTimer = null;
-  let _history = null, _trendRange = 'yr', _mapFilter = 'all';
+  let _history = null, _trendRange = 'all', _mapFilter = 'all';
   const _charts = {};
   let _serverMap = null, _geoLoaded = false;
   const _rendered = new Set();
@@ -165,6 +190,9 @@
   // Used by the Other-Games benchmark: one "San Andreas" bar stacks SA-MP +
   // open.mp; other platforms (RAGE:MP…) are single-segment bars.
   function stackedBar(id, labels, datasets) {
+    const lastIdx = datasets.length - 1;
+    // Per-row totals (sum across datasets) → shown at the END of each bar.
+    const rowTotals = labels.map((_, i) => datasets.reduce((a, d) => a + (d.data[i] || 0), 0));
     return make(id, {
       type: 'bar',
       data: {
@@ -177,7 +205,7 @@
       options: {
         ...baseOpts,
         indexAxis: 'y',
-        layout: { padding: { right: 46 } },
+        layout: { padding: { right: 64 } },
         scales: {
           x: { stacked: true, ticks: { color: C.muted, font: { size: 11 }, precision: 0 }, grid: { color: C.border }, beginAtZero: true },
           y: { stacked: true, ticks: { color: C.text, font: { size: 11 } }, grid: { display: false } },
@@ -186,11 +214,21 @@
           ...baseOpts.plugins,
           legend: { display: true, position: 'top', labels: { color: C.text, font: { size: 11 }, boxWidth: 12, padding: 10 } },
           tooltip,
-          // Label each segment with its value (skip zero/empty segments). Chart.js
-          // stacks the labels inside each segment.
           datalabels: DL ? {
-            color: C.text, font: { size: 10, weight: '600' }, anchor: 'center', align: 'center',
-            formatter: (v) => (v > 0 ? fmt(v) : ''),
+            // Two labels per element: the in-segment value (theme-aware white,
+            // skip empties) and — only on the last segment — the row TOTAL,
+            // pushed just past the bar end in bold sand.
+            labels: {
+              value: {
+                color: C.text, font: { size: 10, weight: '600' }, anchor: 'center', align: 'center',
+                formatter: (v) => (v > 0 ? fmt(v) : ''),
+              },
+              total: {
+                anchor: 'end', align: 'end', offset: 6, clamp: true,
+                color: C.sand, font: { size: 11, weight: '700' },
+                formatter: (v, ctx) => (ctx.datasetIndex === lastIdx ? fmt(rowTotals[ctx.dataIndex]) : ''),
+              },
+            },
           } : undefined,
         },
       },
@@ -198,12 +236,24 @@
     });
   }
 
-  function doughnut(id, labels, data, colors = PALETTE, showValues = true) {
+  // opts: { showValues=true, outside=false }.
+  //  • outside:true → labels sit OUTSIDE the ring (theme-aware WHITE text) and
+  //    read "value (pct%)" — used for the 2-slice open.mp-vs-SA-MP donuts.
+  //  • otherwise   → compact in-ring labels on dark slice fills.
+  function doughnut(id, labels, data, colors = PALETTE, opts = {}) {
+    const { showValues = true, outside = false } = (typeof opts === 'boolean') ? { showValues: opts } : opts;
+    const labelText = (v, ctx) => {
+      const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
+      const p = pctOf(v, total);
+      if (outside) return `${fmt(v)} (${p}%)`;
+      return p >= 6 ? fmt(v) : ''; // hide labels on tiny slices (in-ring mode)
+    };
     return make(id, {
       type: 'doughnut',
       data: { labels, datasets: [{ data, backgroundColor: colors.map(c => c + 'CC'), borderColor: colors, borderWidth: 1, hoverOffset: 6 }] },
       options: {
         ...baseOpts, cutout: '56%',
+        layout: outside ? { padding: 30 } : undefined,
         plugins: {
           ...baseOpts.plugins,
           legend: { display: true, position: 'right', labels: { color: C.text, font: { size: 11 }, padding: 9, boxWidth: 12 } },
@@ -218,12 +268,13 @@
             },
           },
           datalabels: (DL && showValues) ? {
-            color: C.bg, font: { size: 10, weight: '700' },
-            formatter: (v, ctx) => {
-              const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
-              const p = pctOf(v, total);
-              return p >= 6 ? fmt(v) : ''; // hide labels on tiny slices
-            },
+            color: outside ? C.text : C.bg,           // theme-aware white when outside
+            anchor: outside ? 'end' : 'center',
+            align: outside ? 'end' : 'center',
+            offset: outside ? 8 : 0,
+            clamp: true,
+            font: { size: outside ? 11 : 10, weight: '700' },
+            formatter: labelText,
           } : undefined,
         },
       },
@@ -231,7 +282,12 @@
     });
   }
 
-  function lineChart(id, labels, series) {
+  // `opts` (optional): { xLabel, yLabel } adds titled axes.
+  function lineChart(id, labels, series, opts = {}) {
+    const axisTitle = (text) => ({
+      display: !!text, text, color: C.sand,
+      font: { size: 11, weight: '600', style: 'italic' },
+    });
     return make(id, {
       type: 'line',
       data: {
@@ -253,8 +309,8 @@
           datalabels: DL ? { display: false } : undefined,
         },
         scales: {
-          x: { ticks: { color: C.muted, font: { size: 10 }, maxTicksLimit: 8, maxRotation: 0 }, grid: { color: C.border } },
-          y: { ticks: { color: C.muted, font: { size: 11 }, precision: 0 }, grid: { color: C.border }, beginAtZero: true },
+          x: { title: axisTitle(opts.xLabel || 'Date'), ticks: { color: C.muted, font: { size: 10 }, maxTicksLimit: 8, maxRotation: 0 }, grid: { color: C.border } },
+          y: { title: axisTitle(opts.yLabel), ticks: { color: C.muted, font: { size: 11 }, precision: 0 }, grid: { color: C.border }, beginAtZero: true },
         },
       },
       plugins: DL ? [DL] : [],
@@ -267,7 +323,7 @@
     if (btn) activate(btn.dataset.tab);
   });
   function activate(tab) {
-    if (!['live', 'trends', 'breakdown', 'geography', 'othergames', 'sources'].includes(tab)) tab = 'live';
+    if (!['live', 'trends', 'analysis', 'breakdown', 'geography', 'othergames', 'sources', 'embed'].includes(tab)) tab = 'live';
     _activeTab = tab;
     tabsEl.querySelectorAll('.dash-tab').forEach(b => b.setAttribute('aria-selected', String(b.dataset.tab === tab)));
     panelsEl.querySelectorAll('.dash-panel').forEach(p => p.dataset.active = String(p.dataset.tab === tab));
@@ -276,7 +332,7 @@
 
   // Deep-link a sub-tab via #dashboard-geography etc. (shareable + testable).
   function tabFromHash() {
-    const m = (location.hash || '').match(/^#dashboard-(live|trends|breakdown|geography|othergames|sources)$/);
+    const m = (location.hash || '').match(/^#dashboard-(live|trends|analysis|breakdown|geography|othergames|sources|embed)$/);
     return m ? m[1] : null;
   }
   window.addEventListener('hashchange', () => { const t = tabFromHash(); if (t) activate(t); });
@@ -285,15 +341,23 @@
   panelsEl.innerHTML = `
     <section class="dash-panel" data-tab="live"      data-active="true"></section>
     <section class="dash-panel" data-tab="trends"    data-active="false"></section>
+    <section class="dash-panel" data-tab="analysis"   data-active="false"></section>
     <section class="dash-panel" data-tab="breakdown" data-active="false"></section>
     <section class="dash-panel" data-tab="geography"  data-active="false"></section>
     <section class="dash-panel" data-tab="othergames" data-active="false"></section>
-    <section class="dash-panel" data-tab="sources"    data-active="false"></section>`;
+    <section class="dash-panel" data-tab="sources"    data-active="false"></section>
+    <section class="dash-panel" data-tab="embed"      data-active="false"></section>`;
   // Honour a deep-linked sub-tab on first load — deferred to the next tick so
   // every `const` helper defined below this IIFE block (skeleton, kpi, canvas…)
   // is initialised before activate()→renderTab() can reference them (avoids a
-  // temporal-dead-zone crash on the deep-link path).
-  setTimeout(() => { const t = tabFromHash(); if (t && t !== _activeTab) activate(t); }, 0);
+  // temporal-dead-zone crash on the deep-link path). The same tick paints the
+  // active tab's LOADING state immediately, so the panel is never blank while the
+  // open.mp fetch is in flight (previously it only rendered after the await).
+  setTimeout(() => {
+    const t = tabFromHash();
+    if (t && t !== _activeTab) activate(t);
+    else renderTab(_activeTab);
+  }, 0);
   load();
 
   async function load() {
@@ -303,7 +367,9 @@
       try { _servers = await fetchServers(); cacheServers(_servers); _error = null; }
       catch (err) { console.error('[dashboard] fetch failed', err); _error = err.message || String(err); }
     }
-    fetchHistory().then(h => { _history = h; if (_activeTab === 'trends') renderTab('trends'); });
+    // Re-render any tab that overlays the long-term SA history once it loads
+    // (trends + the all-platform lines on benchmarking & analysis).
+    fetchHistory().then(h => { _history = h; if (['trends', 'othergames', 'analysis'].includes(_activeTab)) renderTab(_activeTab); });
     updateVerdict(); updateHomeCard();
     _geoLoaded = false;
     renderTab(_activeTab);
@@ -329,15 +395,24 @@
     // render them even while the open.mp fetch is pending/failed.
     if (tab === 'othergames') return renderOtherGames(el);
     if (tab === 'sources')    return renderSources(el);
+    if (tab === 'embed')      return renderEmbed(el);
     if (_error && !_servers) { el.innerHTML = `<div class="dash-error">Couldn't reach <code>api.open.mp</code> — ${_error}</div>`; return; }
     if (!_servers) { el.innerHTML = skeleton(); return; }
     if (tab === 'live')      return renderLive(el);
     if (tab === 'trends')    return renderTrends(el);
     if (tab === 'breakdown') return renderBreakdown(el);
     if (tab === 'geography') return renderGeography(el);
+    if (tab === 'analysis')  return renderAnalysis(el);
   }
 
-  const skeleton = () => `<div class="dash-skeleton"><div class="sk"></div><div class="sk"></div><div class="sk"></div><div class="sk"></div></div>`;
+  // Loading state — a spinner + message, shown while the live open.mp snapshot is
+  // being fetched (replaces the old blank/skeleton flash).
+  const skeleton = () => `
+    <div class="dash-loading">
+      <div class="dash-spinner" aria-hidden="true"></div>
+      <div class="dash-loading-text">Loading data — please wait…</div>
+      <div class="dash-loading-sub">Fetching the live open.mp + SA-MP server list.</div>
+    </div>`;
 
   // ══ verdict ════════════════════════════════════════════════════════════════
   const daysSince = (iso) => Math.max(0, Math.floor((Date.now() - new Date(iso + 'T00:00:00Z').getTime()) / 86_400_000));
@@ -380,12 +455,12 @@
     if (!_rendered.has('live')) {
       el.innerHTML = `
         <div class="kpi-row">
+          ${kpi('good',   'Total Players Online (last hour)', 'sv-players')}
+          ${kpi('purple', 'open.mp Players','sv-omp-players')}
+          ${kpi('ember',  'SA-MP Players',  'sv-samp-players')}
           ${kpi('sand',   'Total Servers',  'sv-total')}
           ${kpi('purple', 'open.mp Servers','sv-omp')}
           ${kpi('ember',  'SA-MP Servers',  'sv-samp')}
-          ${kpi('good',   'Players Online', 'sv-players')}
-          ${kpi('purple', 'open.mp Players','sv-omp-players')}
-          ${kpi('ember',  'SA-MP Players',  'sv-samp-players')}
         </div>
 
         <div class="chart-panel" style="margin-bottom:16px">
@@ -485,7 +560,7 @@
           <div class="chart-panel"><h3>Servers <span class="dim">listed</span> ${tip('Total number of servers in the master list over time.')}</h3>${canvas('trend-servers', 260)}</div>
         </div>
         <div class="chart-panel">
-          <h3>open.mp <span style="color:${OMP}">vs</span> SA-MP <span class="dim">players over time</span> ${tip('How the player base splits between open.mp (purple) and legacy SA-MP (cyan). Watch open.mp climb as SA-MP declines.')}</h3>${canvas('trend-split', 260)}
+          <h3>open.mp <span style="color:${OMP}">vs</span> SA-MP <span class="dim">players over time</span> ${tip('How the player base splits between open.mp (purple) and legacy SA-MP (orange). Watch open.mp climb as SA-MP declines.')}</h3>${canvas('trend-split', 260)}
         </div>
         <p class="dash-note" id="trend-note" style="margin-top:14px"></p>`;
       el.querySelector('#trend-range-btns').addEventListener('click', (e) => {
@@ -502,7 +577,7 @@
   function drawTrends() {
     const note = document.getElementById('trend-note');
     if (_history == null) { if (note) note.textContent = 'Loading history…'; return; }
-    const range = RANGES.find(r => r.key === _trendRange) || RANGES[3];
+    const range = RANGES.find(r => r.key === _trendRange) || RANGES[0];
     const cutoff = Date.now() - range.days * 86_400_000;
     const pts = _history.filter(p => new Date(p.t).getTime() >= cutoff);
 
@@ -517,49 +592,117 @@
     if (dashFrom === -1) dashFrom = pts.length;
     const dash = dashFrom > 0 ? dashFrom : null;
 
-    lineChart('trend-players', labels, [{ label: 'Total players', data: pts.map(p => p.p), color: BLUE, dashFrom: dash }]);
-    lineChart('trend-servers', labels, [{ label: 'Total servers', data: pts.map(p => p.s), color: BLUE, dashFrom: dash }]);
+    lineChart('trend-players', labels, [{ label: 'Total players', data: pts.map(p => p.p), color: BLUE, dashFrom: dash }],
+      { xLabel: 'Date', yLabel: 'Players online' });
+    lineChart('trend-servers', labels, [{ label: 'Total servers', data: pts.map(p => p.s), color: BLUE, dashFrom: dash }],
+      { xLabel: 'Date', yLabel: 'Servers listed' });
+    // open.mp only existed from 2023 — before that op=0. Render those leading
+    // zeros as gaps (null) so the purple line doesn't draw a flat run along the
+    // x-axis; it simply begins where open.mp data actually starts.
     lineChart('trend-split', labels, [
-      { label: 'open.mp players', data: pts.map(p => p.op), color: OMP, dashFrom: dash },
+      { label: 'open.mp players', data: pts.map(p => p.op > 0 ? p.op : null), color: OMP, dashFrom: dash },
       { label: 'SA-MP players', data: pts.map(p => p.sp), color: SAMP, dashFrom: dash },
-    ]);
+    ], { xLabel: 'Date', yLabel: 'Players online' });
 
-    const a = pts[0], b = pts[pts.length - 1];
+    // Card baseline = the point closest to EXACTLY one period ago, so each range
+    // reads as "vs yesterday / last week / last month / last quarter / 6 months
+    // ago / last year". (The chart still plots every point in the window above;
+    // this only picks the comparison anchor for the % cards.) We search the full
+    // history — not just the window — so a sparse window still finds a sensible
+    // "one period ago" point. Falls back to the oldest in-window point.
+    const b = pts[pts.length - 1];
+    const targetTs = Date.now() - range.days * 86_400_000;
+    const a = _trendRange === 'all'
+      ? pts[0]
+      : _history.reduce((best, p) => {
+          const d = Math.abs(new Date(p.t).getTime() - targetTs);
+          return (best == null || d < best._d) ? Object.assign({}, p, { _d: d }) : best;
+        }, null) || pts[0];
+    // In the "All" range the cards are really "current totals" — a % change vs the
+    // 2010 archive point is misleading, so suppress the ▲/▼ delta line there.
+    const noDelta = _trendRange === 'all';
+    // Human period label for the delta line: "yesterday" / "last week (1–7 Jun
+    // 2026)" / "last month (May 2026)" / "last year (2025)" etc., derived from the
+    // chosen range and the actual baseline point's date.
+    const periodLbl = periodLabel(_trendRange, a.t);
     const kpiEl = document.getElementById('trend-kpis');
     if (kpiEl) kpiEl.innerHTML = [
-      pctCard('good', 'Players', a.p, b.p),
-      pctCard('ember', 'Servers', a.s, b.s),
-      pctCard('purple', 'open.mp players', a.op, b.op),
-      pctCard('ember', 'SA-MP players', a.sp, b.sp),
+      pctCard('good',   'Total players',   a.p,  b.p,  periodLbl, noDelta),
+      pctCard('purple', 'open.mp players', a.op, b.op, periodLbl, noDelta),
+      pctCard('ember',  'SA-MP players',   a.sp, b.sp, periodLbl, noDelta),
+      pctCard('sand',   'Total servers',   a.s,  b.s,  periodLbl, noDelta),
+      pctCard('purple', 'open.mp servers', a.os, b.os, periodLbl, noDelta),
+      pctCard('ember',  'SA-MP servers',   a.ss, b.ss, periodLbl, noDelta),
     ].join('');
 
     const anyEst = pts.some(p => p.est);
     const hasSacnr = pts.some(p => p.source === 'sacnr');
-    if (note) note.textContent = anyEst
-      ? `% change over the last ${range.label}. Solid line = real data (archived snapshots, refreshed hourly); dashed = estimated pre-archive backbone.`
-      : hasSacnr
-        ? `% change over the ${range.key === 'all' ? 'full archive' : `last ${range.label}`}. Real data: SACNR Monitor SA-MP totals (yearly, 2010→2022) + archived open.mp snapshots (2023→), refreshed hourly. The open.mp/SA-MP split only exists from 2023 — earlier years are all SA-MP.`
-        : `% change over the last ${range.label}, from real open.mp snapshots (Internet Archive), refreshed hourly.`;
+    // "All" shows current totals (no vs-2010 delta); other ranges show % change.
+    const lead = _trendRange === 'all' ? 'Current totals over the' : '% change over the';
+    if (note) note.textContent = _trendRange === 'all'
+      ? `Cards show current totals. Full archive timeline: SACNR Monitor SA-MP totals (yearly, 2010→2022) + archived open.mp snapshots (2023→), refreshed hourly. The open.mp/SA-MP split only exists from 2023 — earlier years are all SA-MP.`
+      : anyEst
+        ? `${lead} last ${range.label}. Solid line = real data (archived snapshots, refreshed hourly); dashed = estimated pre-archive backbone.`
+        : hasSacnr
+          ? `${lead} last ${range.label}. Real data: SACNR Monitor SA-MP totals (yearly, 2010→2022) + archived open.mp snapshots (2023→), refreshed hourly. The open.mp/SA-MP split only exists from 2023 — earlier years are all SA-MP.`
+          : `${lead} last ${range.label}, from real open.mp snapshots (Internet Archive), refreshed hourly.`;
   }
 
-  function pctCard(color, label, from, to) {
+  // `periodLbl` (optional) = human period label for the baseline, e.g.
+  // "yesterday" / "last week (1–7 Jun 2026)" / "last year (2025)". Shown after
+  // the baseline value: "from 21,010 · last year (2025)".
+  // `noDelta` (optional) hides the ▲/▼ change line entirely (used by the "All"
+  // range, where the card is a current total, not a trend vs the 2010 archive).
+  function pctCard(color, label, from, to, periodLbl, noDelta) {
+    if (noDelta) {
+      return `<div class="kpi-card ${color}"><div class="kpi-label">${label}</div><div class="kpi-value">${fmt(to)}</div></div>`;
+    }
+    const when = periodLbl ? ` <span class="dim">· ${periodLbl}</span>` : '';
     let deltaHtml;
     if (!from) {
       deltaHtml = to > 0
-        ? `<span class="kpi-delta up">▲ new <span class="dim">from 0</span></span>`
+        ? `<span class="kpi-delta up">▲ new <span class="dim">from 0${when}</span></span>`
         : `<span class="kpi-delta dim">no change</span>`;
     } else {
       const delta = ((to - from) / from) * 100, up = delta >= 0;
-      deltaHtml = `<span class="kpi-delta ${up ? 'up' : 'down'}">${up ? '▲' : '▼'} ${Math.abs(delta).toFixed(1)}% <span class="dim">from ${fmt(from)}</span></span>`;
+      deltaHtml = `<span class="kpi-delta ${up ? 'up' : 'down'}">${up ? '▲' : '▼'} ${Math.abs(delta).toFixed(1)}% <span class="dim">from ${fmt(from)}${when}</span></span>`;
     }
     return `<div class="kpi-card ${color}"><div class="kpi-label">${label}</div><div class="kpi-value">${fmt(to)}</div>${deltaHtml}</div>`;
   }
 
+  // Human label for the comparison baseline, given the range key + baseline date.
+  //   day  → "yesterday"
+  //   week → "last week (1–7 Jun 2026)"   (the 7-day window ending at baseline)
+  //   mo   → "last month (May 2026)"
+  //   qtr  → "last quarter (Mar 2026)"
+  //   half → "6 months ago (Dec 2025)"
+  //   yr   → "last year (2025)"
+  function periodLabel(rangeKey, baselineISO) {
+    const d = new Date(baselineISO);
+    const dMon = (x) => x.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+    const mon  = (x) => x.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' });
+    switch (rangeKey) {
+      case 'day':  return 'yesterday';
+      case 'week': {
+        const end = d, start = new Date(d.getTime() - 6 * 86_400_000);
+        return `last week (${start.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}–${dMon(end)})`;
+      }
+      case 'mo':   return `last month (${mon(d)})`;
+      case 'qtr':  return `last quarter (${mon(d)})`;
+      case 'half': return `6 months ago (${mon(d)})`;
+      case 'yr':   return `last year (${d.getFullYear()})`;
+      default:     return mon(d);
+    }
+  }
+
+  // Unambiguous axis dates. Long ranges (>~7mo) → "Mon YYYY" (e.g. "Jun 2026");
+  // short ranges → "D Mon YYYY" (e.g. "1 Jun 2026"). We always show the FULL year
+  // so "Jan 22" can't be misread as a day-of-month vs a 2-digit year.
   function shortDate(iso, days) {
     const d = new Date(iso);
     return days > 200
-      ? d.toLocaleDateString(undefined, { month: 'short', year: '2-digit' })
-      : d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+      ? d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+      : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   }
 
   // ══ TAB: Breakdown ══════════════════════════════════════════════════════════
@@ -584,8 +727,8 @@
           <div class="chart-panel"><h3>Password <span class="dim">protected</span> ${tip('How many servers require a password to join vs are open. Counts and share shown.')}</h3>${canvas('bd-pass', 240)}</div>
         </div>
         <div class="chart-grid">
-          <div class="chart-panel"><h3>open.mp <span style="color:${OMP}">vs</span> SA-MP <span class="dim">servers</span> ${tip('Share of the server count: open.mp (purple) vs legacy SA-MP (cyan).')}</h3>${canvas('bd-split', 240)}</div>
-          <div class="chart-panel"><h3>open.mp <span style="color:${OMP}">vs</span> SA-MP <span class="dim">players</span> ${tip('Share of all online players: open.mp (purple) vs SA-MP (cyan).')}</h3>${canvas('bd-split-p', 240)}</div>
+          <div class="chart-panel"><h3>open.mp <span style="color:${OMP}">vs</span> SA-MP <span class="dim">servers</span> ${tip('Share of the server count: open.mp (purple) vs legacy SA-MP (orange).')}</h3>${canvas('bd-split', 240)}</div>
+          <div class="chart-panel"><h3>open.mp <span style="color:${OMP}">vs</span> SA-MP <span class="dim">players</span> ${tip('Share of all online players: open.mp (purple) vs SA-MP (orange).')}</h3>${canvas('bd-split-p', 240)}</div>
         </div>`;
       _rendered.add('breakdown');
     }
@@ -623,22 +766,24 @@
       for (let i = 0; i < uEdges.length - 1; i++) { if (u >= uEdges[i] && u < uEdges[i + 1]) { uCounts[i]++; break; } }
       if (u >= 100) uCounts[uCounts.length - 1]++;
     });
-    doughnut('bd-cap', uLabels, uCounts, BLUES);
+    // Capacity utilisation → green (empty-ish) to red (packed) tint.
+    doughnut('bd-cap', uLabels, uCounts, GREEN_RED);
 
     // Languages — "Unknown" for blanks (label already does that).
     const langs = topCounts(_servers, s => (s.la || '').trim() || 'Unknown', 10);
     barChart('bd-lang', langs.map(x => x[0]), langs.map(x => x[1]), BLUE, true);
 
-    // open.mp versions → purple family (open.mp-specific data).
+    // open.mp versions → purple family, dark (newest) → light (oldest).
     const vers = topCounts(t.omp, s => s.vn || 'Unknown', 8);
     doughnut('bd-ver', vers.map(x => x[0]), vers.map(x => x[1]), PURPLES);
 
-    // Password protected — generic → blue family.
-    doughnut('bd-pass', ['Open', 'Password'], [t.totalServers - passCount, passCount], [BLUES[0], BLUES[3]]);
+    // Password protected — green = open (unlocked), red = password (locked).
+    doughnut('bd-pass', ['Open', 'Password'], [t.totalServers - passCount, passCount], [C.good, C.bad]);
 
-    // Splits — open.mp purple, SA-MP cyan.
-    doughnut('bd-split', ['open.mp', 'SA-MP'], [t.ompServers, t.sampServers], [OMP, SAMP]);
-    doughnut('bd-split-p', ['open.mp', 'SA-MP'], [t.ompPlayers, t.sampPlayers], [OMP, SAMP]);
+    // open.mp vs SA-MP — purple vs orange, 2 slices, labels OUTSIDE the ring with
+    // "value (pct%)", theme-aware white text. No click-to-filter (only 2 values).
+    doughnut('bd-split',   ['open.mp', 'SA-MP'], [t.ompServers, t.sampServers], [OMP, SAMP], { outside: true });
+    doughnut('bd-split-p', ['open.mp', 'SA-MP'], [t.ompPlayers, t.sampPlayers], [OMP, SAMP], { outside: true });
   }
 
   // ══ TAB: Geography ══════════════════════════════════════════════════════════
@@ -652,13 +797,13 @@
         <div class="kpi-row" id="geo-kpis"></div>
         <div class="geo-map-wrap">
           <div class="geo-map-toolbar">
+            <div id="geo-status" class="dash-status">Open this tab to resolve server locations…</div>
             <div class="dash-controls" id="geo-filter-btns">
               <button class="btn-range active" data-filter="all">All servers</button>
               <button class="btn-range" data-filter="omp">open.mp</button>
               <button class="btn-range" data-filter="samp">SA-MP</button>
             </div>
           </div>
-          <div id="geo-status" class="dash-status">Open this tab to resolve server locations…</div>
           <div id="geo-map" class="geo-map"></div>
           <div class="geo-legend">
             <span><i style="background:${C.ember}"></i>&gt;100 players</span>
@@ -682,10 +827,10 @@
     const t = totals(_servers);
     const kpis = document.getElementById('geo-kpis');
     if (kpis) kpis.innerHTML = [
-      kpiVal('purple', 'open.mp Servers', fmt(t.ompServers)),
-      kpiVal('info',   'Players Online',  fmt(t.totalPlayers)),
-      kpiVal('good',   'Active Servers',  fmt(t.activeServers)),
-      kpiVal('sand',   'Avg Players/Server', t.totalServers ? (t.totalPlayers / t.totalServers).toFixed(1) : '0'),
+      kpiVal('good',   'Total Players Online', fmt(t.totalPlayers)),
+      kpiVal('purple', 'open.mp Servers',      fmt(t.ompServers)),
+      kpiVal('info',   `Active Servers ${tip('Servers with at least one player online right now (empty servers excluded).')}`, fmt(t.activeServers)),
+      kpiVal('sand',   'Avg Players/Server',   t.totalServers ? (t.totalPlayers / t.totalServers).toFixed(1) : '0'),
     ].join('');
 
     // Players-by-language (kept here; the per-server-count language chart lives
@@ -850,7 +995,8 @@
   const OG_PLATFORMS = {
     samp:    { game: 'GTA: San Andreas', label: 'SA-MP',      color: C.ember },   // orange (reserved)
     omp:     { game: 'GTA: San Andreas', label: 'open.mp',    color: C.purple },  // purple (reserved)
-    ragemp:  { game: 'GTA V',            label: 'RAGE:MP',    color: '#29E0FF' },  // cyan
+    ragemp:  { game: 'GTA V',            label: 'RAGE:MP',    color: '#34D399' },  // green
+    vcmp:    { game: 'GTA: Vice City',   label: 'VC:MP',      color: '#29E0FF' },  // cyan
     altv:    { game: 'GTA V',            label: 'alt:V',      color: '#14B8A6' },  // teal
     fivem:   { game: 'GTA V',            label: 'FiveM',      color: '#A7C957' },  // lime
     mtasa:   { game: 'GTA: San Andreas', label: 'MTA:SA',     color: '#F4C430' },  // amber
@@ -866,20 +1012,19 @@
           <strong>Online benchmarking</strong> — how the live San Andreas player base
           (open.mp + SA-MP) stacks up against other GTA multiplayer platforms, recorded
           hourly (these platforms’ public APIs aren’t reachable directly from a browser).
-          <strong>RAGE:MP</strong> (GTA&nbsp;V) reports players; <strong>MTA:SA</strong>
-          (GTA&nbsp;San&nbsp;Andreas) reports a reliable server count from its binary
-          master. alt:V&nbsp;/&nbsp;FiveM probes run hourly and light up automatically if
-          their APIs return. GTA&nbsp;III&nbsp;/&nbsp;Vice&nbsp;City&nbsp;/&nbsp;IV have no
-          live master (all dead).
+          <strong>RAGE:MP</strong> (GTA&nbsp;V), <strong>MTA:SA</strong>
+          (GTA&nbsp;San&nbsp;Andreas) and <strong>VC:MP</strong> (Vice&nbsp;City) report
+          live players and servers. alt:V&nbsp;/&nbsp;FiveM probes run hourly and light up
+          automatically if their APIs return. GTA&nbsp;III&nbsp;/&nbsp;IV have no live master.
         </p>
         <div class="kpi-row" id="og-kpis"></div>
         <div class="chart-panel">
-          <h3>Live player benchmark <span class="dim">across platforms</span> ${tip('Current concurrent players per platform. The San Andreas bar is stacked: SA-MP (orange) + open.mp (purple), live from api.open.mp. Other platforms (RAGE:MP, MTA…) come from their public APIs, refreshed hourly, each in its own colour. Different games — shown for scale.')}</h3>
+          <h3>Live player benchmark <span class="dim">across platforms</span> ${tip('Current concurrent players per platform. The San Andreas bar is stacked: SA-MP (orange) + open.mp (purple), live from api.open.mp. Other platforms (RAGE:MP, MTA:SA, VC:MP) come from their public APIs, refreshed hourly, each in its own colour. The number at the end of each bar is that platform’s total. Different games — shown for scale.')}</h3>
           ${canvas('og-bench', 240)}
         </div>
         <div class="chart-panel" style="margin-top:16px">
-          <h3>Other-platform <span class="dim">players over time</span> ${tip('Concurrent players over time for each non-SA platform (currently RAGE:MP), from its public API, refreshed hourly.')}</h3>
-          ${canvas('og-players', 260)}
+          <h3>Players <span class="dim">over time · all platforms</span> ${tip('Concurrent players over time for every platform — San Andreas (SA-MP + open.mp) plus RAGE:MP, MTA:SA and VC:MP — on one shared timeline. Combines hourly recordings with Internet-Archive history.')}</h3>
+          ${canvas('og-players', 300)}
         </div>
         <p class="dash-note" id="og-note" style="margin-top:12px"></p>`;
       _rendered.add('othergames');
@@ -941,24 +1086,249 @@
       destroy('og-bench');
     }
 
-    // ── History lines: player count over time for player-bearing platforms ───
-    const series = [];
-    playerKeys.concat(Object.keys(OG_PLATFORMS).filter(k => k !== 'samp' && k !== 'omp' && !playerKeys.includes(k)))
-      .filter((k, i, a) => a.indexOf(k) === i)
-      .forEach(k => {
-        const pts = hist.map(p => ({ t: p.t, v: p.sources?.[k]?.players })).filter(p => p.v != null);
-        if (pts.length >= 2) series.push({ label: OG_PLATFORMS[k].label, data: pts.map(p => p.v), color: OG_PLATFORMS[k].color, _t: pts.map(p => p.t) });
-      });
-    if (series.length) {
-      const labels = series[0]._t.map(t => shortDate(t, 30));
-      lineChart('og-players', labels, series.map(s => ({ label: s.label, data: s.data, color: s.color })));
-      if (note) note.textContent = 'Other-platform history fills in hourly. San Andreas long-term history lives in the Trends tab.';
-    } else {
-      destroy('og-players');
-      if (note) note.textContent = hist.length
+    // ── History lines: players over time for EVERY platform on ONE time axis ──
+    // Includes San Andreas (SA-MP + open.mp, from the long-term server-history)
+    // plus every recorded other platform (RAGE:MP, MTA:SA, VC:MP…). Each platform
+    // is aligned to a shared, sorted set of timestamps with null gaps so lines of
+    // different length plot correctly against the same axis.
+    drawAllPlatformLines('og-players', note,
+      'Players over time across every platform — San Andreas (SA-MP + open.mp) and the other GTA masters (RAGE:MP, MTA:SA, VC:MP), blending hourly recordings with Internet-Archive history.');
+  }
+
+  // Build a unified players-over-time line chart across SA-MP, open.mp and the
+  // other-game platforms. `histKey` selects 'players' vs 'servers' on the
+  // other-games rows; San Andreas comes from _history (p.sp / p.op).
+  function drawAllPlatformLines(canvasId, noteEl, noteText, metric = 'players') {
+    const og = _otherHist || [];
+    // 1) Collect each platform's (timestamp → value) map.
+    const saField = metric === 'servers' ? { samp: 'ss', omp: 'os' } : { samp: 'sp', omp: 'op' };
+    const maps = {}; // key → Map(iso → value)
+    const add = (key, iso, v) => {
+      if (v == null) return;
+      (maps[key] ||= new Map()).set(iso, v);
+    };
+    (_history || []).forEach(p => {
+      if (p.sp != null) add('samp', p.t, p[saField.samp]);
+      if (p.op > 0)     add('omp',  p.t, p[saField.omp]); // open.mp only after 2023
+    });
+    og.forEach(p => {
+      for (const [k, v] of Object.entries(p.sources || {})) {
+        if (k === 'samp' || k === 'omp') continue;
+        add(k, p.t, v?.[metric]);
+      }
+    });
+
+    // 2) Unified, sorted timestamp axis across all contributing platforms.
+    const allTs = [...new Set(Object.values(maps).flatMap(m => [...m.keys()]))].sort();
+    const platforms = Object.keys(maps).filter(k => OG_PLATFORMS[k] && maps[k].size >= 2);
+    if (!allTs.length || !platforms.length) {
+      destroy(canvasId);
+      if (noteEl) noteEl.textContent = og.length
         ? 'Only one snapshot so far — the trend lines appear once there are at least two.'
-        : 'No other-platform history yet — it populates hourly.';
+        : 'History populates hourly (and from the Internet Archive).';
+      return;
     }
+    // Span > ~7 months ⇒ "Mon YYYY" axis labels, else day-level.
+    const spanDays = (new Date(allTs[allTs.length - 1]) - new Date(allTs[0])) / 86_400_000;
+    const labels = allTs.map(t => shortDate(t, spanDays > 200 ? 365 : 30));
+    const series = platforms.map(k => ({
+      label: OG_PLATFORMS[k].label,
+      color: OG_PLATFORMS[k].color,
+      data: allTs.map(t => (maps[k].has(t) ? maps[k].get(t) : null)),
+    }));
+    lineChart(canvasId, labels, series, { xLabel: 'Date', yLabel: metric === 'servers' ? 'Servers' : 'Players online' });
+    if (noteEl) noteEl.textContent = noteText;
+  }
+
+  // ══ TAB: Server Analysis ═════════════════════════════════════════════════════
+  // What KIND of servers carry the SA-MP/open.mp scene (gamemode + language
+  // popularity), plus a cross-GAME comparison (SA-MP, open.mp, RAGE:MP, MTA:SA,
+  // VC:MP) by server count and players — the broad "who's playing what" view.
+
+  // Free-text gamemodes are messy ("FZ:RP v5.06 - Rol…", "Grand Larceny"…). Bucket
+  // them into a handful of recognisable genres by keyword; anything unmatched is
+  // "Other". Order matters — first match wins.
+  const GAMEMODE_RULES = [
+    { genre: 'Roleplay',   re: /\brp\b|role\s*play|roleplay|\brpg\b|:rp|rol\b|real life|real-life/i },
+    { genre: 'Cops & Robbers', re: /cops?\s*(and|&|n)?\s*robbers?|\bcnr\b|\bcdc\b/i },
+    { genre: 'Freeroam',   re: /free\s*roam|freeroam|\bfr\b|sandbox/i },
+    { genre: 'Racing',     re: /\brace|racing|drift|stunt/i },
+    { genre: 'Deathmatch', re: /death\s*match|\bdm\b|\btdm\b|war\b|gang\s*war|\bcbug/i },
+    { genre: 'Survival',   re: /survival|zombie|hunger|apocalyp/i },
+    { genre: 'Minigames',  re: /mini\s*game|minigame|party|fun\b/i },
+  ];
+  const gmGenre = (gm) => {
+    const s = (gm || '').trim();
+    if (!s) return 'Unknown';
+    for (const r of GAMEMODE_RULES) if (r.re.test(s)) return r.genre;
+    return 'Other';
+  };
+
+  function renderAnalysis(el) {
+    if (!_rendered.has('analysis')) {
+      el.innerHTML = `
+        <p class="dash-note">
+          What kind of servers make up the live scene — gamemode genres and the
+          languages players speak — plus how the wider family of GTA multiplayer
+          <strong>games</strong> (SA-MP, open.mp, RAGE:MP, MTA:SA, VC:MP) compares by
+          server count and live players.
+        </p>
+        <div class="chart-grid">
+          <div class="chart-panel">
+            <div class="chart-toolbar"><h3>Gamemode <span class="dim">genres · by servers</span> ${tip('Every SA-MP/open.mp server bucketed into a genre by keywords in its gamemode text (Roleplay, Cops & Robbers, Freeroam, Racing, Deathmatch…). Shows which kinds of servers there are most of.')}</h3></div>
+            ${canvas('an-gm-servers', 260)}
+          </div>
+          <div class="chart-panel">
+            <div class="chart-toolbar"><h3>Gamemode <span class="dim">genres · by players</span> ${tip('The same genre buckets, but weighted by live players — which kinds of servers people actually play on right now.')}</h3></div>
+            ${canvas('an-gm-players', 260)}
+          </div>
+        </div>
+        <div class="chart-grid">
+          <div class="chart-panel"><h3>Top Languages <span class="dim">by players</span> ${tip('Live players summed per declared server language — which language communities are most active.')}</h3>${canvas('an-lang', 260)}</div>
+          <div class="chart-panel"><h3>Top Gamemodes <span class="dim">(raw)</span> ${tip('The most common raw gamemode strings, before genre-bucketing — useful for spotting big individual scripts/communities.')}</h3>${canvas('an-gm-raw', 260)}</div>
+        </div>
+        <div class="chart-panel">
+          <h3>Cross-game <span class="dim">comparison · servers</span> ${tip('How many public servers each GTA-multiplayer game has online right now. SA-MP + open.mp are live from api.open.mp; RAGE:MP, MTA:SA and VC:MP from their public masters (hourly). Number at the end of each bar = server count.')}</h3>
+          ${canvas('an-games-servers', 240)}
+        </div>
+        <div class="chart-panel" style="margin-top:16px">
+          <h3>Servers <span class="dim">over time · all games</span> ${tip('Server count over time for every platform on one shared timeline — combining hourly recordings with Internet-Archive history.')}</h3>
+          ${canvas('an-games-time', 300)}
+        </div>
+        <p class="dash-note" id="an-note" style="margin-top:12px"></p>`;
+      _rendered.add('analysis');
+    }
+    // Other-games history is needed for the cross-game charts; lazy-load it.
+    if (_otherHist == null) {
+      fetch('data/othergames-history.json').then(r => r.ok ? r.json() : { points: [] })
+        .then(o => { _otherHist = Array.isArray(o?.points) ? o.points : []; drawAnalysis(); })
+        .catch(() => { _otherHist = []; drawAnalysis(); });
+    } else {
+      drawAnalysis();
+    }
+  }
+
+  function drawAnalysis() {
+    if (!_servers) return;
+    const t = totals(_servers);
+    const og = _otherHist || [];
+    const latest = og.length ? og[og.length - 1].sources || {} : {};
+    const otherGames = ['ragemp', 'mtasa', 'vcmp'].filter(k => latest[k]);
+
+    // ── Gamemode genres (servers + players) ───────────────────────────────
+    const byGenreServers = topSum(_servers, s => gmGenre(s.gm), () => 1, 8);
+    barChart('an-gm-servers', byGenreServers.map(x => x[0]), byGenreServers.map(x => x[1]), BLUE, true);
+    const byGenrePlayers = topSum(_servers, s => gmGenre(s.gm), s => s.pc || 0, 8);
+    barChart('an-gm-players', byGenrePlayers.map(x => x[0]), byGenrePlayers.map(x => x[1]), BLUE, true);
+
+    // ── Languages by players + raw gamemodes ──────────────────────────────
+    const langP = topSum(_servers, s => (s.la || '').trim() || 'Unknown', s => s.pc || 0, 12);
+    barChart('an-lang', langP.map(x => x[0]), langP.map(x => x[1]), BLUE, true);
+    const gmRaw = topSum(_servers.filter(s => (s.pc || 0) > 0), s => (s.gm || '').trim() || 'Unknown', s => s.pc || 0, 12);
+    barChart('an-gm-raw', gmRaw.map(x => x[0].slice(0, 28)), gmRaw.map(x => x[1]), BLUE, true);
+
+    // ── Cross-game server-count comparison ────────────────────────────────
+    // One bar per GAME. San Andreas stacks SA-MP + open.mp; others are single
+    // segments in their own colour, with the row total at the bar end.
+    const cats = ['San Andreas'];
+    const at = (cat, val) => cats.map(c => (c === cat ? val : 0));
+    const datasets = [
+      { label: 'SA-MP',   color: OG_PLATFORMS.samp.color, data: at('San Andreas', t.sampServers) },
+      { label: 'open.mp', color: OG_PLATFORMS.omp.color,  data: at('San Andreas', t.ompServers) },
+    ];
+    otherGames.forEach(k => {
+      const cat = `${OG_PLATFORMS[k].label} · ${OG_PLATFORMS[k].game}`;
+      if (!cats.includes(cat)) cats.push(cat);
+      datasets.push({ label: OG_PLATFORMS[k].label, color: OG_PLATFORMS[k].color, data: cats.map(c => (c === cat ? (latest[k].servers || 0) : 0)) });
+    });
+    // Re-pad every dataset to the final cats length (cats grew as we pushed).
+    datasets.forEach(d => { while (d.data.length < cats.length) d.data.push(0); });
+    stackedBar('an-games-servers', cats, datasets);
+
+    // ── Servers over time across every platform ───────────────────────────
+    drawAllPlatformLines('an-games-time', document.getElementById('an-note'),
+      'Server count over time across every platform, blending hourly recordings with Internet-Archive history.', 'servers');
+  }
+
+  // ══ TAB: Embed ═══════════════════════════════════════════════════════════════
+  // Lets anyone embed the live dashboard (the region from the "Is SA-MP dead?"
+  // verdict through every tab) on their own site via an <iframe>. The iframe
+  // loads THIS page with ?embed=dashboard, which strips the site chrome and shows
+  // only #dashboard (see the EMBED block at the top + the .embed-mode CSS).
+  // The snippet users COPY always points at the canonical public site, so embeds
+  // load the real, deployed dashboard.
+  function embedURL() {
+    return 'https://mac-andreas.github.io/?embed=dashboard#dashboard';
+  }
+  // The local PREVIEW loads THIS exact page (so you see the current build, even on
+  // file:// or a fork) — just with the embed flag added.
+  function previewURL() {
+    const u = new URL(location.href);
+    u.searchParams.set('embed', 'dashboard');
+    u.hash = 'dashboard';
+    return u.toString();
+  }
+  function iframeSnippet(height) {
+    const src = esc(embedURL());
+    return `<iframe src="${src}" title="Mac-Andreas live SA-MP / open.mp dashboard" `
+      + `width="100%" height="${height}" loading="lazy" `
+      + `style="border:1px solid #2F3623;border-radius:8px;max-width:1100px;width:100%" `
+      + `referrerpolicy="no-referrer-when-downgrade"></iframe>`;
+  }
+
+  function renderEmbed(el) {
+    if (_rendered.has('embed')) return;
+    const heights = { Compact: 720, Standard: 1000, Tall: 1400 };
+    el.innerHTML = `
+      <p class="dash-note">
+        Put this <strong>live</strong> dashboard on your own site or forum. The embed shows
+        everything from the <em>“Is SA-MP dead?”</em> verdict down through every tab — live
+        open.mp + SA-MP data, refreshed in the visitor’s browser. Pick a height, copy the
+        snippet, and paste it into any HTML page.
+      </p>
+      <div class="chart-panel">
+        <div class="chart-toolbar"><h3>Embed <span class="dim">snippet</span> ${tip('Standard HTML <iframe>. It loads this dashboard in “embed” mode (no site header/footer). Width is responsive; choose a height that fits your layout.')}</h3></div>
+        <div class="embed-options" id="embed-size-btns">
+          ${Object.entries(heights).map(([k, v], i) => `<button class="btn-range${i === 1 ? ' active' : ''}" data-h="${v}">${k} <span class="dim">${v}px</span></button>`).join('')}
+        </div>
+        <textarea class="embed-snippet" id="embed-code" readonly spellcheck="false"></textarea>
+        <div class="embed-copy-row">
+          <button class="dash-select dl-btn" id="embed-copy">Copy snippet</button>
+          <span class="embed-copied" id="embed-copied">Copied ✓</span>
+          <a class="dash-select dl-btn" id="embed-open" target="_blank" rel="noopener">Open embed view ↗</a>
+        </div>
+      </div>
+      <div class="chart-panel" style="margin-top:16px">
+        <div class="chart-toolbar"><h3>Live <span class="dim">preview</span></h3></div>
+        <iframe class="embed-preview-frame" id="embed-preview" title="Embed preview"></iframe>
+      </div>`;
+
+    const codeEl = el.querySelector('#embed-code');
+    const preview = el.querySelector('#embed-preview');
+    const openLink = el.querySelector('#embed-open');
+    let height = heights.Standard;
+    const refresh = () => {
+      codeEl.value = iframeSnippet(height);
+      preview.src = previewURL();   // preview the CURRENT build (local/fork-safe)
+      openLink.href = previewURL();
+    };
+    refresh();
+
+    el.querySelector('#embed-size-btns').addEventListener('click', (e) => {
+      const b = e.target.closest('[data-h]'); if (!b) return;
+      height = +b.dataset.h;
+      el.querySelectorAll('#embed-size-btns .btn-range').forEach(x => x.classList.toggle('active', x === b));
+      // Only the snippet height changes; the preview src is unaffected.
+      codeEl.value = iframeSnippet(height);
+    });
+    el.querySelector('#embed-copy').addEventListener('click', async () => {
+      codeEl.select();
+      try { await navigator.clipboard.writeText(codeEl.value); }
+      catch { document.execCommand('copy'); }
+      const c = el.querySelector('#embed-copied');
+      c.classList.add('show'); setTimeout(() => c.classList.remove('show'), 1600);
+    });
+    _rendered.add('embed');
   }
 
   // ══ TAB: Sources ════════════════════════════════════════════════════════════
@@ -990,16 +1360,23 @@
     {
       name: 'RAGE:MP master',
       where: 'cdn.rage.mp',
-      years: 'Live',
+      years: 'Live + 2018→present',
       provides: 'GTA V (RAGE:MP) server + player counts for cross-platform benchmarking.',
-      process: 'Public master list (JSON). Used for the live player benchmark.',
+      process: 'Public master list (JSON), refreshed hourly. Historical points from Internet-Archive captures of the same master.',
     },
     {
-      name: 'MTA:SA master',
-      where: 'master.mtasa.com',
-      years: 'Live',
-      provides: 'MTA:SA (GTA San Andreas) server count.',
-      process: 'Public ASE master list. Server count is reliable; player totals are not exposed in a verifiable form, so only the server count is shown.',
+      name: 'MTA:SA community',
+      where: 'community.multitheftauto.com',
+      years: 'Live + 2021→present',
+      provides: 'MTA:SA (GTA San Andreas) live players + server count.',
+      process: 'Public community servers page publishes a verified “N players online on M servers” total, read hourly; history from Internet-Archive captures. Falls back to the binary ASE master for a reliable server count.',
+    },
+    {
+      name: 'game-state.com',
+      where: 'game-state.com',
+      years: 'Live + 2014→present',
+      provides: 'VC:MP (GTA Vice City) live players + server count.',
+      process: 'Public server browser; per-server player cells are summed across pages hourly. History from Internet-Archive captures.',
     },
     {
       name: 'geojs.io',
@@ -1013,9 +1390,28 @@
   function renderSources(el) {
     if (_rendered.has('sources')) return;
     el.innerHTML = `
+      <div class="live-banner">
+        <div class="live-banner-status">
+          <span class="live-dot" aria-hidden="true"></span>
+          <span class="live-word">DASHBOARD · LIVE</span>
+          <span class="live-sub" id="src-last-update">Last update: … <span class="dim">(updates hourly)</span></span>
+        </div>
+        <div class="dl-dropdown" id="dl-dropdown">
+          <button type="button" class="dash-select dl-toggle" id="dl-toggle" aria-haspopup="true" aria-expanded="false">
+            Download <span class="dl-caret" aria-hidden="true">▾</span>
+          </button>
+          <div class="dl-menu" id="dl-menu" role="menu" hidden>
+            <button class="dl-item" role="menuitem" data-dl="live">Live servers <span class="dim">· CSV</span></button>
+            <button class="dl-item" role="menuitem" data-dl="history">SA history <span class="dim">· CSV</span></button>
+            <button class="dl-item" role="menuitem" data-dl="othergames">Cross-game history <span class="dim">· CSV</span></button>
+            <button class="dl-item" role="menuitem" data-dl="json">Everything <span class="dim">· JSON</span></button>
+          </div>
+        </div>
+      </div>
       <p class="dash-note">
         Where every figure on this dashboard comes from. Live numbers are read directly from
-        public APIs in your browser; historical numbers are reconstructed from snapshots
+        public APIs in your browser each visit; we also ping the same APIs hourly (the fetcher)
+        so the trend history grows over time. Historical numbers are reconstructed from snapshots
         preserved by the <strong>Internet Archive</strong>. Each row notes the years covered and
         how the data is turned into the charts you see.
       </p>
@@ -1044,8 +1440,140 @@
           snapshots (2023→). The open.mp / SA-MP split only exists from 2023 — earlier years are
           all SA-MP. Different games are shown side by side for scale only; they are distinct titles.
         </p>
+      </div>
+      <div class="chart-panel" style="margin-top:16px">
+        <h3>Legal <span class="dim">&amp; data usage</span></h3>
+        <ul class="src-process">
+          <li><strong>Public data only.</strong> Every figure comes from publicly available
+            master lists / server browsers that these games and tools publish for exactly this
+            purpose — listing live servers — or from the <strong>Internet Archive</strong>'s
+            public captures of those same pages. No private, paywalled or authenticated source
+            is used.</li>
+          <li><strong>Aggregate counts, not personal data.</strong> Only aggregate totals are
+            stored (player counts, server counts, gamemode/language tags, and a public
+            IP-derived country for the map). No personal data about individual players is
+            collected.</li>
+          <li><strong>Light, infrequent, attributed access.</strong> Sources are read at most
+            once an hour with a descriptive user-agent — well within normal, courteous use — and
+            historical points come from the Internet Archive rather than by re-crawling the
+            original sites.</li>
+          <li><strong>Trademarks.</strong> SA-MP, open.mp, MTA, RAGE:MP, VC:MP and Grand Theft
+            Auto belong to their respective owners. This dashboard is an independent,
+            non-commercial community project, not affiliated with or endorsed by them.</li>
+          <li><strong>Takedown.</strong> If you operate one of these sources and would like your
+            data excluded, reach out via the project's GitHub and we'll remove it.</li>
+        </ul>
       </div>`;
+
+    // Last-update line: newest of the live snapshot + the history files.
+    populateLastUpdate();
+
+    // Download dropdown — toggle open/close; pick an item → export → close.
+    const dd = el.querySelector('#dl-dropdown');
+    const toggle = el.querySelector('#dl-toggle');
+    const menu = el.querySelector('#dl-menu');
+    const setOpen = (open) => { menu.hidden = !open; toggle.setAttribute('aria-expanded', String(open)); dd.classList.toggle('open', open); };
+    toggle.addEventListener('click', (e) => { e.stopPropagation(); setOpen(menu.hidden); });
+    menu.addEventListener('click', (e) => {
+      const b = e.target.closest('[data-dl]'); if (!b) return;
+      handleDownload(b.dataset.dl); setOpen(false);
+    });
+    // Close on outside click / Escape.
+    document.addEventListener('click', (e) => { if (!dd.contains(e.target)) setOpen(false); });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') setOpen(false); });
     _rendered.add('sources');
+  }
+
+  // "2 minutes ago" / "1 hour ago" style relative time.
+  function relativeTime(ms) {
+    const diff = Math.max(0, Date.now() - ms);
+    const mins = Math.round(diff / 60000);
+    if (mins < 1) return 'just now';
+    if (mins < 60) return `${mins} minute${mins === 1 ? '' : 's'} ago`;
+    const hrs = Math.round(mins / 60);
+    if (hrs < 24) return `${hrs} hour${hrs === 1 ? '' : 's'} ago`;
+    const days = Math.round(hrs / 24);
+    return `${days} day${days === 1 ? '' : 's'} ago`;
+  }
+
+  function populateLastUpdate() {
+    const elx = document.getElementById('src-last-update');
+    if (!elx) return;
+    const stamps = [];
+    try { const c = JSON.parse(sessionStorage.getItem('ma_servers') || 'null'); if (c?.at) stamps.push(c.at); } catch {}
+    Promise.all([
+      fetch(HISTORY_URL, { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).catch(() => null),
+      fetch('data/othergames-history.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).catch(() => null),
+    ]).then(([h, o]) => {
+      [h?.updated_at, o?.updated_at].forEach(s => { const t = Date.parse(s); if (Number.isFinite(t)) stamps.push(t); });
+      const newest = stamps.length ? Math.max(...stamps) : Date.now();
+      const abs = new Date(newest).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      elx.innerHTML = `Last update: ${relativeTime(newest)} <span class="dim">(updates hourly)</span>`;
+      elx.title = abs;
+    });
+  }
+
+  // ── CSV / JSON export (client-side; no server) ──────────────────────────────
+  const csvCell = (v) => {
+    const s = v == null ? '' : String(v);
+    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+  };
+  const toCSV = (rows, cols) =>
+    [cols.join(','), ...rows.map(r => cols.map(c => csvCell(r[c])).join(','))].join('\n');
+  function downloadBlob(name, text, mime) {
+    const blob = new Blob([text], { type: mime });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
+  const stamp = () => new Date().toISOString().slice(0, 10);
+
+  async function handleDownload(kind) {
+    if (kind === 'live') {
+      if (!_servers) return;
+      const cols = ['name', 'players', 'max', 'fill_pct', 'gamemode', 'language', 'version', 'platform', 'country_ip', 'ip'];
+      const rows = _servers.map(s => ({
+        name: s.hn, players: s.pc || 0, max: s.pm || 0,
+        fill_pct: pctOf(s.pc || 0, s.pm || 0),
+        gamemode: s.gm, language: s.la, version: s.vn,
+        platform: s.omp ? 'open.mp' : 'SA-MP', country_ip: '', ip: s.ip,
+      }));
+      return downloadBlob(`mac-andreas-live-servers-${stamp()}.csv`, toCSV(rows, cols), 'text/csv');
+    }
+    if (kind === 'history') {
+      const h = await fetch(HISTORY_URL, { cache: 'no-cache' }).then(r => r.json()).catch(() => null);
+      const pts = h?.points || [];
+      const cols = ['date', 'total_players', 'total_servers', 'omp_players', 'omp_servers', 'samp_players', 'samp_servers', 'source', 'estimated'];
+      const rows = pts.map(p => ({
+        date: p.t, total_players: p.p, total_servers: p.s,
+        omp_players: p.op, omp_servers: p.os, samp_players: p.sp, samp_servers: p.ss,
+        source: p.source || 'recorder', estimated: p.est ? 'yes' : 'no',
+      }));
+      return downloadBlob(`mac-andreas-sa-history-${stamp()}.csv`, toCSV(rows, cols), 'text/csv');
+    }
+    if (kind === 'othergames') {
+      const o = await fetch('data/othergames-history.json', { cache: 'no-cache' }).then(r => r.json()).catch(() => null);
+      const pts = o?.points || [];
+      const keys = [...new Set(pts.flatMap(p => Object.keys(p.sources || {})))];
+      // Long format: one row per (date, platform) — friendliest for BI tools.
+      const cols = ['date', 'platform', 'game', 'players', 'servers', 'maxslots'];
+      const rows = [];
+      pts.forEach(p => keys.forEach(k => {
+        const v = p.sources?.[k]; if (!v) return;
+        rows.push({ date: p.t, platform: OG_PLATFORMS[k]?.label || k, game: OG_PLATFORMS[k]?.game || '', players: v.players, servers: v.servers, maxslots: v.maxslots });
+      }));
+      return downloadBlob(`mac-andreas-crossgame-history-${stamp()}.csv`, toCSV(rows, cols), 'text/csv');
+    }
+    if (kind === 'json') {
+      const [h, o] = await Promise.all([
+        fetch(HISTORY_URL, { cache: 'no-cache' }).then(r => r.json()).catch(() => null),
+        fetch('data/othergames-history.json', { cache: 'no-cache' }).then(r => r.json()).catch(() => null),
+      ]);
+      const bundle = { exported_at: new Date().toISOString(), live_servers: _servers || [], sa_history: h, crossgame_history: o };
+      return downloadBlob(`mac-andreas-data-${stamp()}.json`, JSON.stringify(bundle, null, 2), 'application/json');
+    }
   }
 
   // ── helpers ─────────────────────────────────────────────────────────────────

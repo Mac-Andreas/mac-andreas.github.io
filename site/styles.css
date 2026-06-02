@@ -1467,11 +1467,16 @@ footer a:hover { color: var(--sand); text-decoration: underline; }
 /* Table */
 .dash-table-toolbar { align-items: flex-end; }
 .dash-controls { display: flex; gap: 8px; flex-wrap: wrap; }
+/* The All-Servers toolbar lets its search box grow to fill the row so long
+   language tags in results aren't visually crowded by a cramped control bar. */
+.dash-table-toolbar .dash-controls { flex: 1 1 100%; flex-wrap: nowrap; }
+.dash-table-toolbar .dash-input { flex: 1 1 auto; }
 .dash-input, .dash-select {
   background: var(--bg-2); border: 1px solid var(--border-2); color: var(--text);
   font: inherit; font-size: 12px; padding: 6px 10px; border-radius: 2px;
 }
-.dash-input { min-width: 220px; }
+.dash-input { min-width: 340px; }
+@media (max-width: 760px) { .dash-table-toolbar .dash-controls { flex-wrap: wrap; } .dash-input { min-width: 0; } }
 .dash-select { text-transform: uppercase; letter-spacing: 1px; font-size: 11px; color: var(--sand); cursor: pointer; }
 .dash-input:focus, .dash-select:focus { border-color: var(--ember); outline: none; }
 .data-table-wrap { overflow: auto; max-height: 460px; border-radius: 4px; }
@@ -1504,12 +1509,105 @@ table.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
   background-size: 200% 100%; animation: dash-sweep 1.4s linear infinite;
 }
 @keyframes dash-sweep { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* Loading state — centred spinner + message while the live snapshot loads. */
+.dash-loading {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; min-height: 240px; text-align: center; padding: 40px 20px;
+}
+.dash-spinner {
+  width: 38px; height: 38px; border-radius: 50%;
+  border: 3px solid var(--border); border-top-color: var(--ember);
+  animation: dash-spin 0.8s linear infinite;
+}
+@keyframes dash-spin { to { transform: rotate(360deg); } }
+.dash-loading-text {
+  font-family: Impact, Oswald, sans-serif; font-style: italic; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--text); font-size: 15px;
+}
+.dash-loading-sub { font-size: 12px; color: var(--muted); }
 .dash-error {
   border: 1px solid var(--bad); background: rgba(201,68,43,0.12); color: #F4C2B5;
   padding: 14px 18px; border-radius: 4px; font-size: 13px;
 }
 .dash-note { font-size: 13px; color: var(--muted); margin: 0 0 16px; line-height: 1.55; }
 .dash-status { font-size: 11px; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); margin: 0 0 10px; }
+
+/* Embed mode (?embed=dashboard): show ONLY the dashboard section so the region
+   from the "Is SA-MP dead?" verdict down to the last tab can be iframed cleanly,
+   with no site hero/nav/footer. */
+body.embed-mode .hero,
+body.embed-mode .site-nav-sticky,
+body.embed-mode footer,
+body.embed-mode main > section:not(#dashboard) { display: none !important; }
+body.embed-mode { background: var(--bg); }
+body.embed-mode main { padding: 0; }
+body.embed-mode #dashboard { display: block !important; }
+body.embed-mode #dashboard .section-head { margin-top: 8px; }
+/* A small "powered by" strip pinned under the embedded dashboard. */
+.embed-credit { text-align: right; font-size: 11px; color: var(--muted); padding: 10px 4px 16px; }
+.embed-credit a { color: var(--sand); text-decoration: none; }
+.embed-credit a:hover { color: var(--ember); }
+
+/* Embed tab: snippet builder. */
+.embed-options { display: flex; gap: 10px; flex-wrap: wrap; margin: 4px 0 14px; }
+.embed-snippet {
+  width: 100%; background: var(--bg); border: 1px solid var(--border-2); color: var(--sand);
+  font-family: "SF Mono", ui-monospace, Menlo, monospace; font-size: 12px;
+  padding: 12px 14px; border-radius: 4px; resize: vertical; min-height: 84px; line-height: 1.5;
+}
+.embed-copy-row { display: flex; align-items: center; gap: 12px; margin-top: 10px; }
+.embed-copied { color: var(--good); font-size: 12px; opacity: 0; transition: opacity 150ms; }
+.embed-copied.show { opacity: 1; }
+.embed-preview-frame {
+  width: 100%; height: 640px; border: 1px solid var(--border); border-radius: 6px;
+  background: var(--panel); margin-top: 8px;
+}
+
+/* Sources tab: LIVE banner + data download (BI/analysis). */
+.live-banner {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px;
+  flex-wrap: wrap; background: var(--panel); border: 1px solid var(--border);
+  border-radius: 4px; padding: 14px 18px; margin-bottom: 16px;
+}
+.live-banner-status { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.live-dot {
+  width: 9px; height: 9px; border-radius: 50%; background: var(--good);
+  box-shadow: 0 0 0 0 rgba(180,216,98,0.7); animation: live-pulse 1.8s infinite;
+}
+@keyframes live-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(180,216,98,0.6); }
+  70%  { box-shadow: 0 0 0 7px rgba(180,216,98,0); }
+  100% { box-shadow: 0 0 0 0 rgba(180,216,98,0); }
+}
+.live-word { font-family: Impact, Oswald, sans-serif; font-style: italic; letter-spacing: 1px; color: var(--good); font-size: 13px; }
+.live-sub { font-size: 12px; color: var(--text); letter-spacing: 0.3px; }
+.dl-btn { cursor: pointer; }
+.dl-btn:hover { border-color: var(--ember); color: var(--ember); }
+
+/* Trends range buttons — right-aligned, wrapping to the right edge. */
+#trend-range-btns { margin-left: auto; justify-content: flex-end; }
+
+/* Download dropdown (right side of the live banner). */
+.dl-dropdown { position: relative; }
+.dl-toggle { cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+.dl-toggle:hover, .dl-dropdown.open .dl-toggle { border-color: var(--ember); color: var(--ember); }
+.dl-caret { font-size: 15px; line-height: 1; transition: transform 150ms; }
+.dl-dropdown.open .dl-caret { transform: rotate(180deg); }
+.dl-menu {
+  position: absolute; right: 0; top: calc(100% + 6px); z-index: 20; min-width: 220px;
+  background: var(--panel); border: 1px solid var(--border-2); border-radius: 6px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.45); padding: 6px; display: flex; flex-direction: column;
+}
+/* `display:flex` above would otherwise override the [hidden] attribute and leave
+   the menu permanently open — keep it closed until JS toggles `hidden` off. */
+.dl-menu[hidden] { display: none; }
+.dl-item {
+  appearance: none; border: none; background: transparent; color: var(--text);
+  font: inherit; font-size: 12px; text-align: left; padding: 9px 12px; border-radius: 4px; cursor: pointer;
+}
+.dl-item:hover { background: var(--bg-2); color: var(--ember); }
+@media (max-width: 600px) { .dl-menu { left: 0; right: auto; } }
 
 /* Geography map — borderless (no tiles). #geo-map IS the Leaflet container:
    Leaflet adds the .leaflet-container class to the element you init on, so the
@@ -1572,6 +1670,10 @@ table.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
   display: flex; align-items: center; justify-content: space-between;
   gap: 12px; flex-wrap: wrap; margin-bottom: 10px;
 }
+/* Status sits inline on the left, the all/omp/SA-MP toggle right-aligned on the
+   same row (its own bottom margin would otherwise misalign them vertically). */
+.geo-map-toolbar .dash-status { margin: 0; flex: 1 1 auto; }
+.geo-map-toolbar .dash-controls { margin-left: auto; }
 .geo-map-caption {
   font-family: Impact, Oswald, sans-serif; font-style: italic;
   letter-spacing: 1px; color: var(--sand); font-size: 14px;
@@ -1587,21 +1689,3 @@ table.data-table { width: 100%; border-collapse: collapse; font-size: 13px; }
 }
 @keyframes verdict-blink { 0%,100%{opacity:1} 50%{opacity:0.45} }
 
-/* ── Forum signature builder (#signatures) ── */
-.sig-builder { display: grid; grid-template-columns: 320px 1fr; gap: 20px; align-items: start; }
-@media (max-width: 760px) { .sig-builder { grid-template-columns: 1fr; } }
-.sig-controls { display: flex; flex-direction: column; gap: 16px; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 18px; }
-.sig-field { display: flex; flex-direction: column; gap: 6px; }
-.sig-field > label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); }
-.sig-seg { display: flex; gap: 0; border: 1px solid var(--border-2); border-radius: 4px; overflow: hidden; }
-.sig-seg button { flex: 1; appearance: none; border: none; background: var(--bg-2); color: var(--muted); font: inherit; font-size: 11px; letter-spacing: 1px; text-transform: uppercase; padding: 8px 6px; cursor: pointer; transition: background 120ms, color 120ms; }
-.sig-seg button + button { border-left: 1px solid var(--border-2); }
-.sig-seg button.active { background: var(--ember); color: var(--bg); font-weight: 700; }
-.sig-quote-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
-.sig-chip { appearance: none; border: 1px solid var(--border-2); background: var(--bg-2); color: var(--sand); font: inherit; font-size: 10px; padding: 5px 8px; border-radius: 999px; cursor: pointer; text-align: left; }
-.sig-chip:hover { border-color: var(--ember); color: var(--ember); }
-.sig-preview-wrap { background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 18px; }
-.sig-preview-label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
-.sig-preview { background: #0E1116; border: 1px solid var(--border); border-radius: 4px; padding: 18px; min-height: 80px; display: flex; align-items: center; justify-content: center; }
-.sig-code { width: 100%; background: var(--bg); border: 1px solid var(--border-2); color: var(--sand); font-family: "SF Mono", ui-monospace, Menlo, monospace; font-size: 12px; padding: 10px 12px; border-radius: 4px; resize: vertical; }
-.sig-copied { color: var(--good); font-size: 12px; margin-left: 10px; }

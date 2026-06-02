@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>Mac-Andreas · Native Mac tools for open.mp</title>
 <meta name="description" content="Native Mac ports, ASI patches, ported scripts, and tools for the open.mp / SA-MP community." />
-<link rel="stylesheet" href="site/styles.css?v=202605312348" />
+<link rel="stylesheet" href="site/styles.css?v=202606021441" />
 <script src="site/icons.js" defer></script>
 </head>
 <body>
@@ -34,7 +34,6 @@
   <a href="#guides"      class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-guides"/></svg>Guides</a>
   <a href="#scripts"     class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-scripts"/></svg>Scripts</a>
   <a href="#dashboard"   class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-dashboard"/></svg>Dashboard</a>
-  <a href="#signatures"  class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-scripts"/></svg>Signatures</a>
   <a href="#garage"      class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-garage"/></svg>Garage</a>
   <a href="#discussions" class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-discussions"/></svg>Discussions</a>
   <a href="#privacy"     class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-privacy"/></svg>Privacy</a>
@@ -205,28 +204,15 @@
     <nav class="dash-tabs" role="tablist" id="dash-tabs">
       <button class="dash-tab" role="tab" data-tab="live"      aria-selected="true">Live Servers</button>
       <button class="dash-tab" role="tab" data-tab="trends"    aria-selected="false">Trends</button>
+      <button class="dash-tab" role="tab" data-tab="analysis"   aria-selected="false">Server Analysis</button>
       <button class="dash-tab" role="tab" data-tab="breakdown" aria-selected="false">Breakdown</button>
       <button class="dash-tab" role="tab" data-tab="geography"  aria-selected="false">Geography</button>
       <button class="dash-tab" role="tab" data-tab="othergames" aria-selected="false">Benchmarking</button>
       <button class="dash-tab" role="tab" data-tab="sources"    aria-selected="false">Sources</button>
+      <button class="dash-tab" role="tab" data-tab="embed"      aria-selected="false">Embed</button>
     </nav>
 
     <div id="dash-panels"></div>
-  </section>
-
-  <!-- ===== Signatures / Embed builder (BBCode, client-side) ===== -->
-  <section id="signatures">
-    <div class="section-head">
-      <h2>Forum <span class="accent">Signatures</span></h2>
-      <span class="meta">BBCode · MyBB-ready · Copy &amp; paste</span>
-    </div>
-    <p class="section-intro">
-      Show off the scene in your forum signature. Pick a style, copy the
-      <strong>BBCode</strong>, and paste it into your MyBB (or any BBCode forum)
-      signature box. Numbers are baked in live when you copy. Every signature ends
-      with a <em>View more →</em> link that opens the dashboard in a new tab.
-    </p>
-    <div id="sig-app"></div>
   </section>
 
   <!-- ===== Garage (topic-tagged repos) ===== -->
@@ -381,11 +367,10 @@
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" defer></script>
 <script src="site/config.js" defer></script>
 <script src="site/apps.js" defer></script>
-<script src="site/servers.js?v=202605312348" defer></script>
-<script src="site/signatures.js" defer></script>
+<script src="site/servers.js?v=202606021441" defer></script>
 <script src="site/repos.js" defer></script>
 <script src="site/discussions.js" defer></script>
 <script src="site/scripts.js" defer></script>
-<script src="site/section-nav.js?v=202605312348" defer></script>
+<script src="site/section-nav.js?v=202606021441" defer></script>
 </body>
 </html>

@@ -26,15 +26,16 @@
   // api.open.mp on every visit. (The Actions recorder also runs hourly.)
   const POLL_MS = 60 * 60 * 1000;
 
-  // "All" first — it's the default range (full 2010→today archive).
+  // Trends range buttons. "Weekly" is the default (_trendRange); "All" spans
+  // the full 2010→today archive. `ck` = the matching ChartKit slider preset.
   const RANGES = [
-    { key: 'all',  label: 'All',       days: 365 * 50 }, // full archive: SACNR 2010 → today
-    { key: 'day',  label: 'Daily',     days: 1 },
-    { key: 'week', label: 'Weekly',    days: 7 },   // rolling 7 days (Mon–Sun framing in note)
-    { key: 'mo',   label: 'Monthly',   days: 30 },
-    { key: 'qtr',  label: 'Quarterly', days: 91 },
-    { key: 'half', label: 'Half-yr',   days: 182 },
-    { key: 'yr',   label: 'Yearly',    days: 365 },
+    { key: 'all',  label: 'All',       days: 365 * 50, ck: 'All', noun: 'archive' }, // full archive: SACNR 2010 → today
+    { key: 'day',  label: 'Daily',     days: 1,   ck: '1D', noun: 'day' },
+    { key: 'week', label: 'Weekly',    days: 7,   ck: '1W', noun: 'week' },   // rolling 7 days (default)
+    { key: 'mo',   label: 'Monthly',   days: 30,  ck: '1M', noun: 'month' },
+    { key: 'qtr',  label: 'Quarterly', days: 91,  ck: '3M', noun: 'quarter' },
+    { key: 'half', label: 'Half-yr',   days: 182, ck: '6M', noun: '6 months' },
+    { key: 'yr',   label: 'Yearly',    days: 365, ck: '1Y', noun: 'year' },
   ];
 
   // Theme — mirrors site/styles.css. open.mp=purple, SA-MP=orange (ember).
@@ -91,8 +92,7 @@
 
   // ── state ───────────────────────────────────────────────────────────────
   let _servers = null, _error = null, _activeTab = 'live', _pollTimer = null;
-  let _history = null, _trendRange = 'all', _mapFilter = 'all';
-  const _charts = {};
+  let _history = null, _trendRange = 'week', _mapFilter = 'all';
   let _serverMap = null, _geoLoaded = false;
   const _rendered = new Set();
 
@@ -143,26 +143,11 @@
   }
 
   // ── chart factory ─────────────────────────────────────────────────────────
-  function destroy(id) { if (_charts[id]) { _charts[id].destroy(); delete _charts[id]; } }
-  const tooltip = { backgroundColor: C.bg, borderColor: '#3E3E4D', borderWidth: 1, titleColor: C.text, bodyColor: C.sand, padding: 10 };
-  // devicePixelRatio:null lets Chart.js read the LIVE window.devicePixelRatio on
-  // each resize — so browser zoom (which changes DPR) re-rasterizes crisply
-  // instead of leaving a stale canvas whose hit-testing maps the cursor to the
-  // wrong data point. A DPR watcher below triggers that resize on zoom.
-  const baseOpts = {
-    responsive: true, maintainAspectRatio: false, devicePixelRatio: null,
-    animation: { duration: 350 },
-    plugins: { legend: { display: false }, tooltip },
-  };
-  const DL = (typeof ChartDataLabels !== 'undefined') ? ChartDataLabels : null; // datalabels plugin
-
-  function make(id, config) {
-    destroy(id);
-    const el = document.getElementById(id);
-    if (!el) return null;
-    _charts[id] = new Chart(el.getContext('2d'), config);
-    return _charts[id];
-  }
+  // Every chart is drawn by ChartKit (site/chart-kit.js), which gives each one
+  // the same Customize + Export controls (and, on time-series lines, type chips
+  // and a date-range slider) and remembers each chart's appearance.
+  const CK = window.ChartKit;
+  function destroy(id) { if (CK) CK.destroy(id); }
 
   // Browser zoom changes window.devicePixelRatio but fires no resize event, which
   // is what left Chart.js canvases at a stale scale (tooltip/crosshair landing on
@@ -170,7 +155,7 @@
   // re-arms after every change, and resize all live charts when it shifts.
   (function watchZoom() {
     let last = window.devicePixelRatio || 1;
-    const resizeAll = () => { for (const id in _charts) { try { _charts[id].resize(); } catch {} } };
+    const resizeAll = () => { if (CK) CK.resizeAll(); };
     const arm = () => {
       const mq = matchMedia(`(resolution: ${last}dppx)`);
       const onChange = () => {
@@ -187,165 +172,31 @@
     let t; window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(resizeAll, 150); });
   })();
 
-  // Bar with value labels at the end of each bar.
-  function barChart(id, labels, data, color = C.ember, horizontal = false, fmtLabel) {
-    // color may be a single hex string (uniform bars) or an array (per-bar).
-    const bg = Array.isArray(color) ? color.map(c => c + '99') : color + '99';
-    const bd = Array.isArray(color) ? color : color;
-    const cfg = {
-      type: 'bar',
-      data: { labels, datasets: [{ data, backgroundColor: bg, borderColor: bd, borderWidth: 1, borderRadius: 2 }] },
-      options: {
-        ...baseOpts,
-        indexAxis: horizontal ? 'y' : 'x',
-        layout: { padding: horizontal ? { right: 38 } : { top: 22 } },
-        scales: {
-          x: { ticks: { color: C.muted, font: { size: 11 }, precision: 0, maxRotation: 0 }, grid: { color: C.border }, beginAtZero: true },
-          y: { ticks: { color: C.text, font: { size: 11 } }, grid: { display: !horizontal, color: C.border }, beginAtZero: true },
-        },
-        plugins: {
-          ...baseOpts.plugins,
-          datalabels: DL ? {
-            anchor: 'end', align: horizontal ? 'right' : 'top', clamp: true,
-            color: C.text, font: { size: 10, weight: '600' },
-            formatter: (v) => (fmtLabel ? fmtLabel(v) : fmt(v)),
-          } : undefined,
-        },
-      },
-      plugins: DL ? [DL] : [],
-    };
-    return make(id, cfg);
+  // Bar with value labels at the end of each bar. `color` is one hex (uniform
+  // bars) or an array (per bar). opts: { valueTitle, categoryTitle, valueFormat }.
+  function barChart(id, labels, data, color = BLUE, horizontal = false, opts = {}) {
+    return CK ? CK.bar(id, { labels, values: data, colors: color, horizontal, ...opts }) : null;
   }
 
-  // Horizontal STACKED bar. `datasets` = [{ label, data:[per-category], color }].
-  // Used by the Other-Games benchmark: one "San Andreas" bar stacks SA-MP +
-  // open.mp; other platforms (RAGE:MP…) are single-segment bars.
-  function stackedBar(id, labels, datasets) {
-    const lastIdx = datasets.length - 1;
-    // Per-row totals (sum across datasets) → shown at the END of each bar.
-    const rowTotals = labels.map((_, i) => datasets.reduce((a, d) => a + (d.data[i] || 0), 0));
-    return make(id, {
-      type: 'bar',
-      data: {
-        labels,
-        datasets: datasets.map(d => ({
-          label: d.label, data: d.data,
-          backgroundColor: d.color + 'CC', borderColor: d.color, borderWidth: 1, borderRadius: 2,
-        })),
-      },
-      options: {
-        ...baseOpts,
-        indexAxis: 'y',
-        layout: { padding: { right: 64 } },
-        scales: {
-          x: { stacked: true, ticks: { color: C.muted, font: { size: 11 }, precision: 0 }, grid: { color: C.border }, beginAtZero: true },
-          y: { stacked: true, ticks: { color: C.text, font: { size: 11 } }, grid: { display: false } },
-        },
-        plugins: {
-          ...baseOpts.plugins,
-          legend: { display: true, position: 'top', labels: { color: C.text, font: { size: 11 }, boxWidth: 12, padding: 10 } },
-          tooltip,
-          datalabels: DL ? {
-            // Two labels per element: the in-segment value (theme-aware white,
-            // skip empties) and — only on the last segment — the row TOTAL,
-            // pushed just past the bar end in bold sand.
-            labels: {
-              value: {
-                color: C.text, font: { size: 10, weight: '600' }, anchor: 'center', align: 'center',
-                formatter: (v) => (v > 0 ? fmt(v) : ''),
-              },
-              total: {
-                anchor: 'end', align: 'end', offset: 6, clamp: true,
-                color: C.sand, font: { size: 11, weight: '700' },
-                formatter: (v, ctx) => (ctx.datasetIndex === lastIdx ? fmt(rowTotals[ctx.dataIndex]) : ''),
-              },
-            },
-          } : undefined,
-        },
-      },
-      plugins: DL ? [DL] : [],
-    });
+  // Horizontal STACKED bar. `datasets` = [{ key, label, data:[per-category], color }].
+  // Used by the cross-game charts: one "San Andreas" bar stacks SA-MP + open.mp
+  // (+ MTA:SA); other platforms are single-segment bars. Row totals at the end.
+  function stackedBar(id, labels, datasets, opts = {}) {
+    return CK ? CK.stacked(id, { labels, datasets, horizontal: true, ...opts }) : null;
   }
 
   // opts: { showValues=true, outside=false }.
-  //  • outside:true → labels sit OUTSIDE the ring (theme-aware WHITE text) and
-  //    read "value (pct%)" — used for the 2-slice open.mp-vs-SA-MP donuts.
+  //  • outside:true → labels sit OUTSIDE the ring and read "value (pct%)" —
+  //    used for the 2-slice open.mp-vs-SA-MP donuts.
   //  • otherwise   → compact in-ring labels on dark slice fills.
   function doughnut(id, labels, data, colors = PALETTE, opts = {}) {
-    const { showValues = true, outside = false } = (typeof opts === 'boolean') ? { showValues: opts } : opts;
-    const labelText = (v, ctx) => {
-      const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
-      const p = pctOf(v, total);
-      if (outside) return `${fmt(v)} (${p}%)`;
-      return p >= 6 ? fmt(v) : ''; // hide labels on tiny slices (in-ring mode)
-    };
-    return make(id, {
-      type: 'doughnut',
-      data: { labels, datasets: [{ data, backgroundColor: colors.map(c => c + 'CC'), borderColor: colors, borderWidth: 1, hoverOffset: 6 }] },
-      options: {
-        ...baseOpts, cutout: '56%',
-        layout: outside ? { padding: 30 } : undefined,
-        plugins: {
-          ...baseOpts.plugins,
-          legend: { display: true, position: 'right', labels: { color: C.text, font: { size: 11 }, padding: 9, boxWidth: 12 } },
-          tooltip: {
-            ...tooltip,
-            callbacks: {
-              label: (ctx) => {
-                const total = ctx.dataset.data.reduce((a, b) => a + b, 0);
-                const v = ctx.parsed;
-                return `${ctx.label}: ${fmt(v)} (${pctOf(v, total)}%)`;
-              },
-            },
-          },
-          datalabels: (DL && showValues) ? {
-            color: outside ? C.text : C.bg,           // theme-aware white when outside
-            anchor: outside ? 'end' : 'center',
-            align: outside ? 'end' : 'center',
-            offset: outside ? 8 : 0,
-            clamp: true,
-            font: { size: outside ? 11 : 10, weight: '700' },
-            formatter: labelText,
-          } : undefined,
-        },
-      },
-      plugins: (DL && showValues) ? [DL] : [],
-    });
+    return CK ? CK.doughnut(id, { labels, values: data, colors, ...opts }) : null;
   }
 
-  // `opts` (optional): { xLabel, yLabel } adds titled axes.
-  function lineChart(id, labels, series, opts = {}) {
-    const axisTitle = (text) => ({
-      display: !!text, text, color: C.sand,
-      font: { size: 11, weight: '600', style: 'italic' },
-    });
-    return make(id, {
-      type: 'line',
-      data: {
-        labels,
-        datasets: series.map(s => ({
-          label: s.label, data: s.data, borderColor: s.color,
-          backgroundColor: s.color + '22', borderWidth: 2, tension: 0.3,
-          pointRadius: labels.length > 40 ? 0 : 2, pointHoverRadius: 4, fill: false, spanGaps: true,
-          segment: { borderDash: ctx => (s.dashFrom != null && ctx.p0DataIndex < s.dashFrom) ? [5, 4] : undefined },
-        })),
-      },
-      options: {
-        ...baseOpts,
-        interaction: { mode: 'index', intersect: false },
-        plugins: {
-          ...baseOpts.plugins,
-          legend: { display: series.length > 1, position: 'top', labels: { color: C.text, font: { size: 11 }, boxWidth: 12, padding: 10 } },
-          tooltip,
-          datalabels: DL ? { display: false } : undefined,
-        },
-        scales: {
-          x: { title: axisTitle(opts.xLabel || 'Date'), ticks: { color: C.muted, font: { size: 10 }, maxTicksLimit: 8, maxRotation: 0 }, grid: { color: C.border } },
-          y: { title: axisTitle(opts.yLabel), ticks: { color: C.muted, font: { size: 11 }, precision: 0 }, grid: { color: C.border }, beginAtZero: true },
-        },
-      },
-      plugins: DL ? [DL] : [],
-    });
+  // Time-series line. `series` = [{ key, label, color, points:[{ t:ms, y, est? }] }].
+  // opts: { xLabel, yLabel, range: '1D'|'1W'|'1M'|'3M'|'6M'|'1Y'|'All', defaults }.
+  function lineChart(id, series, opts = {}) {
+    return CK ? CK.line(id, { series, ...opts }) : null;
   }
 
   // ── sub-tabs ───────────────────────────────────────────────────────────────
@@ -389,7 +240,9 @@
     if (t && t !== _activeTab) activate(t);
     else renderTab(_activeTab);
   }, 0);
-  load();
+  // Also deferred: with a cached snapshot load() renders synchronously, which
+  // would otherwise run before the helper consts below (kpi, canvas…) exist.
+  setTimeout(load, 0);
 
   async function load() {
     const cached = cachedServers();
@@ -446,29 +299,33 @@
     </div>`;
 
   // ══ verdict ════════════════════════════════════════════════════════════════
-  const daysSince = (iso) => Math.max(0, Math.floor((Date.now() - new Date(iso + 'T00:00:00Z').getTime()) / 86_400_000));
+  // Function declaration (hoisted): load() can call updateVerdict() synchronously
+  // during boot when the live snapshot is cached — a `const` arrow here was still
+  // in its temporal dead zone then, which threw and left the verdict on "loading".
+  function daysSince(iso) { return Math.max(0, Math.floor((Date.now() - new Date(iso + 'T00:00:00Z').getTime()) / 86_400_000)); }
 
   function updateVerdict() {
     const root = document.getElementById('samp-verdict');
     const aEl = document.getElementById('samp-verdict-a');
     const subEl = document.getElementById('samp-verdict-sub');
     if (!root || !aEl || !subEl) return;
+    // The answer is the rounded No | Yes box on the right: CSS lights the
+    // matching option from data-state (alive → No, dead → Yes; loading/unknown
+    // → both dimmed). aria-label carries the answer for screen readers.
+    const answer = (state, label) => { root.dataset.state = state; aEl.setAttribute('aria-label', `Answer: ${label}`); };
     if (_error && !_servers) {
-      root.dataset.state = 'unknown'; aEl.textContent = '¯\\_(ツ)_/¯';
+      answer('unknown', 'unknown');
       subEl.textContent = "Can't tell — the open.mp API is unreachable right now."; return;
     }
     if (!_servers) {
-      // Still fetching — keep the "Wait for it…" answer.
-      root.dataset.state = 'loading';
-      aEl.innerHTML = '<span class="verdict-wait">Wait for it…</span>';
+      answer('loading', 'still counting');
       subEl.textContent = 'Counting live SA-MP players…';
       return;
     }
     // Verdict: >1 SA-MP player online ⇒ NOT dead.
     const t = totals(_servers);
     const alive = t.sampPlayers > 1;
-    root.dataset.state = alive ? 'alive' : 'dead';
-    aEl.textContent = alive ? 'No.' : 'Yes.';
+    answer(alive ? 'alive' : 'dead', alive ? 'No' : 'Yes');
     const days = daysSince(SAMP_FORUMS_CLOSED);
     subEl.innerHTML = alive
       ? `<strong>${fmt(t.sampPlayers)}</strong> players across <strong>${fmt(t.sampServers)}</strong> SA-MP servers are online right now — ${fmt(days)} days since SA-MP started winding down.`
@@ -537,7 +394,7 @@
     setText('sv-samp-players', fmt(t.sampPlayers));
 
     const top20 = _servers.filter(s => s.pc > 0).sort((a, b) => (b.pc || 0) - (a.pc || 0)).slice(0, 20);
-    barChart('sv-top20', top20.map(s => (s.hn || '').slice(0, 30)), top20.map(s => s.pc || 0), BLUE, true);
+    barChart('sv-top20', top20.map(s => (s.hn || '').slice(0, 30)), top20.map(s => s.pc || 0), BLUE, true, { valueTitle: 'Players online', categoryTitle: 'Server' });
     renderTable();
   }
 
@@ -580,18 +437,18 @@
     if (!_rendered.has('trends')) {
       el.innerHTML = `
         <div class="chart-toolbar dash-table-toolbar">
-          <h3 class="trend-title">Player &amp; Server <span class="dim">trends</span> ${tip('Built from real archived snapshots: SACNR Monitor SA-MP totals (yearly, 2010→2022) + api.open.mp/servers via the Internet Archive (2023→), refreshed hourly. Pick “All” for the full 2010→today timeline. % cards compare the oldest vs newest point in the chosen range.')}</h3>
+          <h3 class="trend-title">Player &amp; Server <span class="dim">trends</span> ${tip('Built from real archived snapshots: SACNR Monitor SA-MP totals (yearly, 2010→2022) + api.open.mp/servers via the Internet Archive (2023→), refreshed hourly. Defaults to the last week; pick “All” for the full 2010→today timeline. % cards compare the newest point with one period ago. Each chart also has its own date slider.')}</h3>
           <div class="dash-controls" id="trend-range-btns">
             ${RANGES.map(r => `<button class="btn-range${r.key === _trendRange ? ' active' : ''}" data-range="${r.key}">${r.label}</button>`).join('')}
           </div>
         </div>
         <div class="kpi-row" id="trend-kpis"></div>
         <div class="chart-grid">
-          <div class="chart-panel"><h3>Players <span class="dim">online</span> ${tip('Total concurrent players across all listed servers over time.')}</h3>${canvas('trend-players', 260)}</div>
-          <div class="chart-panel"><h3>Servers <span class="dim">listed</span> ${tip('Total number of servers in the master list over time.')}</h3>${canvas('trend-servers', 260)}</div>
+          <div class="chart-panel"><h3>Players <span class="dim">online</span> ${tip('Total concurrent players across all listed servers over time.')}</h3>${canvas('trend-players', 300)}</div>
+          <div class="chart-panel"><h3>Servers <span class="dim">listed</span> ${tip('Total number of servers in the master list over time.')}</h3>${canvas('trend-servers', 300)}</div>
         </div>
         <div class="chart-panel">
-          <h3>open.mp <span style="color:${OMP}">vs</span> SA-MP <span class="dim">players over time</span> ${tip('How the player base splits between open.mp (purple) and legacy SA-MP (orange). Watch open.mp climb as SA-MP declines.')}</h3>${canvas('trend-split', 260)}
+          <h3>open.mp <span style="color:${OMP}">vs</span> SA-MP <span class="dim">players over time</span> ${tip('How the player base splits between open.mp (purple) and legacy SA-MP (orange). Watch open.mp climb as SA-MP declines.')}</h3>${canvas('trend-split', 300)}
         </div>
         <p class="dash-note" id="trend-note" style="margin-top:14px"></p>`;
       el.querySelector('#trend-range-btns').addEventListener('click', (e) => {
@@ -612,28 +469,29 @@
     const cutoff = Date.now() - range.days * 86_400_000;
     const pts = _history.filter(p => new Date(p.t).getTime() >= cutoff);
 
+    // Charts get the FULL history; the range button sets each chart's date
+    // window (its own slider can then fine-tune it). Weekday above a diagonal
+    // date on the X axis by default — toggle both in each chart's Customize.
+    if (_history.length >= 2) {
+      const T = (p) => Date.parse(p.t);
+      const lineOpts = (yLabel) => ({ xLabel: 'Date', yLabel, range: range.ck, defaults: { weekday: true, diagonal: true } });
+      lineChart('trend-players', [{ key: 'total', label: 'Total players', color: BLUE, points: _history.map(p => ({ t: T(p), y: p.p, est: !!p.est })) }],
+        lineOpts('Players online'));
+      lineChart('trend-servers', [{ key: 'total', label: 'Total servers', color: BLUE, points: _history.map(p => ({ t: T(p), y: p.s, est: !!p.est })) }],
+        lineOpts('Servers listed'));
+      // open.mp only existed from 2023 — before that op=0. Drop those leading
+      // zeros so the purple line simply begins where open.mp data starts.
+      lineChart('trend-split', [
+        { key: 'omp',  label: 'open.mp players', color: OMP,  points: _history.filter(p => p.op > 0).map(p => ({ t: T(p), y: p.op, est: !!p.est })) },
+        { key: 'samp', label: 'SA-MP players',   color: SAMP, points: _history.map(p => ({ t: T(p), y: p.sp, est: !!p.est })) },
+      ], lineOpts('Players online'));
+    }
+
     if (pts.length < 2) {
-      ['trend-players', 'trend-servers', 'trend-split'].forEach(destroy);
       const k = document.getElementById('trend-kpis'); if (k) k.innerHTML = '';
       if (note) note.textContent = 'Not enough history in this range yet — it fills in as hourly snapshots accumulate.';
       return;
     }
-    const labels = pts.map(p => shortDate(p.t, range.days));
-    let dashFrom = pts.findIndex(p => !p.est);
-    if (dashFrom === -1) dashFrom = pts.length;
-    const dash = dashFrom > 0 ? dashFrom : null;
-
-    lineChart('trend-players', labels, [{ label: 'Total players', data: pts.map(p => p.p), color: BLUE, dashFrom: dash }],
-      { xLabel: 'Date', yLabel: 'Players online' });
-    lineChart('trend-servers', labels, [{ label: 'Total servers', data: pts.map(p => p.s), color: BLUE, dashFrom: dash }],
-      { xLabel: 'Date', yLabel: 'Servers listed' });
-    // open.mp only existed from 2023 — before that op=0. Render those leading
-    // zeros as gaps (null) so the purple line doesn't draw a flat run along the
-    // x-axis; it simply begins where open.mp data actually starts.
-    lineChart('trend-split', labels, [
-      { label: 'open.mp players', data: pts.map(p => p.op > 0 ? p.op : null), color: OMP, dashFrom: dash },
-      { label: 'SA-MP players', data: pts.map(p => p.sp), color: SAMP, dashFrom: dash },
-    ], { xLabel: 'Date', yLabel: 'Players online' });
 
     // Card baseline = the point closest to EXACTLY one period ago, so each range
     // reads as "vs yesterday / last week / last month / last quarter / 6 months
@@ -673,10 +531,10 @@
     if (note) note.textContent = _trendRange === 'all'
       ? `Cards show current totals. Full archive timeline: SACNR Monitor SA-MP totals (yearly, 2010→2022) + archived open.mp snapshots (2023→), refreshed hourly. The open.mp/SA-MP split only exists from 2023 — earlier years are all SA-MP.`
       : anyEst
-        ? `${lead} last ${range.label}. Solid line = real data (archived snapshots, refreshed hourly); dashed = estimated pre-archive backbone.`
+        ? `${lead} last ${range.noun}. Solid line = real data (archived snapshots, refreshed hourly); dashed = estimated pre-archive backbone.`
         : hasSacnr
-          ? `${lead} last ${range.label}. Real data: SACNR Monitor SA-MP totals (yearly, 2010→2022) + archived open.mp snapshots (2023→), refreshed hourly. The open.mp/SA-MP split only exists from 2023 — earlier years are all SA-MP.`
-          : `${lead} last ${range.label}, from real open.mp snapshots (Internet Archive), refreshed hourly.`;
+          ? `${lead} last ${range.noun}. Real data: SACNR Monitor SA-MP totals (yearly, 2010→2022) + archived open.mp snapshots (2023→), refreshed hourly. The open.mp/SA-MP split only exists from 2023 — earlier years are all SA-MP.`
+          : `${lead} last ${range.noun}, from real open.mp snapshots (Internet Archive), refreshed hourly.`;
   }
 
   // `periodLbl` (optional) = human period label for the baseline, e.g.
@@ -724,16 +582,6 @@
       case 'yr':   return `last year (${d.getFullYear()})`;
       default:     return mon(d);
     }
-  }
-
-  // Unambiguous axis dates. Long ranges (>~7mo) → "Mon YYYY" (e.g. "Jun 2026");
-  // short ranges → "D Mon YYYY" (e.g. "1 Jun 2026"). We always show the FULL year
-  // so "Jan 22" can't be misread as a day-of-month vs a 2-digit year.
-  function shortDate(iso, days) {
-    const d = new Date(iso);
-    return days > 200
-      ? d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
-      : d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
   }
 
   // ══ TAB: Breakdown ══════════════════════════════════════════════════════════
@@ -786,7 +634,7 @@
       if (pc < 1) return; // drop empty servers
       for (let i = 0; i < edges.length - 1; i++) { if (pc >= edges[i] && pc < edges[i + 1]) { counts[i]++; break; } }
     });
-    barChart('bd-dist', labels, counts, BLUE);
+    barChart('bd-dist', labels, counts, BLUE, false, { valueTitle: 'Servers', categoryTitle: 'Players per server' });
 
     // Capacity utilisation — only populated servers; human-labelled bands.
     const uLabels = ['1-24%', '25-49%', '50-74%', '75-89%', '90-99%', 'Packed (100%)'];
@@ -802,7 +650,7 @@
 
     // Languages — "Unknown" for blanks (label already does that).
     const langs = topCounts(_servers, s => (s.la || '').trim() || 'Unknown', 10);
-    barChart('bd-lang', langs.map(x => x[0]), langs.map(x => x[1]), BLUE, true);
+    barChart('bd-lang', langs.map(x => x[0]), langs.map(x => x[1]), BLUE, true, { valueTitle: 'Servers', categoryTitle: 'Language' });
 
     // open.mp versions → purple family, dark (newest) → light (oldest).
     const vers = topCounts(t.omp, s => s.vn || 'Unknown', 8);
@@ -867,7 +715,7 @@
     // Players-by-language (kept here; the per-server-count language chart lives
     // only on the Breakdown tab now — no duplication).
     const langP = topSum(_servers, s => (s.la || '').trim() || 'Unknown', s => s.pc || 0, 12);
-    barChart('geo-lang-p', langP.map(x => x[0]), langP.map(x => x[1]), BLUE, true);
+    barChart('geo-lang-p', langP.map(x => x[0]), langP.map(x => x[1]), BLUE, true, { valueTitle: 'Players online', categoryTitle: 'Language' });
 
     if (_serverMap) setTimeout(() => _serverMap.invalidateSize(), 60);
     if (!_geoLoaded) { _geoLoaded = true; loadMap(); }
@@ -914,7 +762,10 @@
         const chunk = uniqueIPs.slice(i, i + 100);
         const rows = await fetch(`https://get.geojs.io/v1/ip/geo.json?ip=${chunk.join(',')}`).then(r => r.json()).catch(() => []);
         (Array.isArray(rows) ? rows : [rows]).forEach(r => {
-          if (r && r.ip && r.latitude && r.longitude) ipGeo[r.ip] = { lat: +r.latitude, lon: +r.longitude, country: r.country || 'Unknown' };
+          // geojs can return non-numeric coords (e.g. "nil") for unknown IPs —
+          // skip those, or Leaflet throws and aborts the whole map + country chart.
+          const lat = parseFloat(r && r.latitude), lon = parseFloat(r && r.longitude);
+          if (r && r.ip && Number.isFinite(lat) && Number.isFinite(lon)) ipGeo[r.ip] = { lat, lon, country: r.country || 'Unknown' };
         });
       }
       _geoCache = { ipGeo };
@@ -1008,7 +859,7 @@
       counts[geo.country] = (counts[geo.country] || 0) + 1;
     });
     const top = Object.entries(counts).sort((a, b) => b[1] - a[1]).slice(0, 12);
-    if (top.length) barChart('geo-country', top.map(x => x[0]), top.map(x => x[1]), BLUE, true);
+    if (top.length) barChart('geo-country', top.map(x => x[0]), top.map(x => x[1]), BLUE, true, { valueTitle: 'Servers', categoryTitle: 'Country' });
   }
 
   // ══ TAB: Other Games ════════════════════════════════════════════════════════
@@ -1055,8 +906,8 @@
           ${canvas('og-bench', 240)}
         </div>
         <div class="chart-panel" style="margin-top:16px">
-          <h3>Players <span class="dim">over time · all platforms</span> ${tip('Concurrent players over time for every platform — San Andreas (SA-MP + open.mp) plus RAGE:MP, MTA:SA and VC:MP — on one shared timeline. Combines hourly recordings with Internet-Archive history.')}</h3>
-          ${canvas('og-players', 300)}
+          <h3>Players <span class="dim">over time · all platforms</span> ${tip('Concurrent players over time for every platform — San Andreas (SA-MP + open.mp) plus RAGE:MP, MTA:SA and VC:MP — on one shared timeline. Combines hourly recordings with Internet-Archive history. Click a platform chip to show/hide it (Alt/⌥-click = only that one; hover = highlight its line), drag the slider or pick a preset to change dates (default: last month), and use the icons top-right to customize or export the chart.')}</h3>
+          ${canvas('og-players', 340)}
         </div>
         <p class="dash-note" id="og-note" style="margin-top:12px"></p>`;
       _rendered.add('othergames');
@@ -1107,16 +958,16 @@
       const at = (cat, val) => cats.map(c => (c === cat ? val : 0));
       const datasets = [];
       if (sa) {
-        datasets.push({ label: OG_PLATFORMS.samp.label,  color: OG_PLATFORMS.samp.color,  data: at('San Andreas', sa.sampPlayers) });
-        datasets.push({ label: OG_PLATFORMS.omp.label,   color: OG_PLATFORMS.omp.color,   data: at('San Andreas', sa.ompPlayers) });
+        datasets.push({ key: 'samp',  label: OG_PLATFORMS.samp.label,  color: OG_PLATFORMS.samp.color,  data: at('San Andreas', sa.sampPlayers) });
+        datasets.push({ key: 'omp',   label: OG_PLATFORMS.omp.label,   color: OG_PLATFORMS.omp.color,   data: at('San Andreas', sa.ompPlayers) });
         if (mtaPlayers > 0)
-          datasets.push({ label: OG_PLATFORMS.mtasa.label, color: OG_PLATFORMS.mtasa.color, data: at('San Andreas', mtaPlayers) });
+          datasets.push({ key: 'mtasa', label: OG_PLATFORMS.mtasa.label, color: OG_PLATFORMS.mtasa.color, data: at('San Andreas', mtaPlayers) });
       }
       otherGameKeys.forEach(k => {
         const cat = `${OG_PLATFORMS[k].label} · ${OG_PLATFORMS[k].game}`;
-        datasets.push({ label: OG_PLATFORMS[k].label, color: OG_PLATFORMS[k].color, data: at(cat, latestVal(k, 'players')) });
+        datasets.push({ key: k, label: OG_PLATFORMS[k].label, color: OG_PLATFORMS[k].color, data: at(cat, latestVal(k, 'players')) });
       });
-      stackedBar('og-bench', cats, datasets);
+      stackedBar('og-bench', cats, datasets, { valueTitle: 'Players online', categoryTitle: 'Game' });
     } else {
       destroy('og-bench');
     }
@@ -1130,17 +981,18 @@
       'Players over time across every platform — San Andreas (SA-MP + open.mp) and the other GTA masters (RAGE:MP, MTA:SA, VC:MP), blending hourly recordings with Internet-Archive history.');
   }
 
-  // Build a unified players-over-time line chart across SA-MP, open.mp and the
-  // other-game platforms. `histKey` selects 'players' vs 'servers' on the
-  // other-games rows; San Andreas comes from _history (p.sp / p.op).
+  // Players (or servers) over time for SA-MP, open.mp and every other-game
+  // platform on one time axis. San Andreas comes from _history (p.sp / p.op …);
+  // the others from _otherHist. Defaults to the last month; ChartKit adds the
+  // type chips, date slider, sort, styling and export.
   function drawAllPlatformLines(canvasId, noteEl, noteText, metric = 'players') {
     const og = _otherHist || [];
-    // 1) Collect each platform's (timestamp → value) map.
     const saField = metric === 'servers' ? { samp: 'ss', omp: 'os' } : { samp: 'sp', omp: 'op' };
-    const maps = {}; // key → Map(iso → value)
+    const pts = {}; // platform key → [{ t, y }]
     const add = (key, iso, v) => {
-      if (v == null) return;
-      (maps[key] ||= new Map()).set(iso, v);
+      const t = Date.parse(iso);
+      if (v == null || !Number.isFinite(t)) return;
+      (pts[key] ||= []).push({ t, y: v });
     };
     (_history || []).forEach(p => {
       if (p.sp != null) add('samp', p.t, p[saField.samp]);
@@ -1153,25 +1005,16 @@
       }
     });
 
-    // 2) Unified, sorted timestamp axis across all contributing platforms.
-    const allTs = [...new Set(Object.values(maps).flatMap(m => [...m.keys()]))].sort();
-    const platforms = Object.keys(maps).filter(k => OG_PLATFORMS[k] && maps[k].size >= 2);
-    if (!allTs.length || !platforms.length) {
+    const platforms = Object.keys(OG_PLATFORMS).filter(k => (pts[k] || []).length >= 2);
+    if (!platforms.length) {
       destroy(canvasId);
       if (noteEl) noteEl.textContent = og.length
         ? 'Only one snapshot so far — the trend lines appear once there are at least two.'
         : 'History populates hourly (and from the Internet Archive).';
       return;
     }
-    // Span > ~7 months ⇒ "Mon YYYY" axis labels, else day-level.
-    const spanDays = (new Date(allTs[allTs.length - 1]) - new Date(allTs[0])) / 86_400_000;
-    const labels = allTs.map(t => shortDate(t, spanDays > 200 ? 365 : 30));
-    const series = platforms.map(k => ({
-      label: OG_PLATFORMS[k].label,
-      color: OG_PLATFORMS[k].color,
-      data: allTs.map(t => (maps[k].has(t) ? maps[k].get(t) : null)),
-    }));
-    lineChart(canvasId, labels, series, { xLabel: 'Date', yLabel: metric === 'servers' ? 'Servers' : 'Players online' });
+    const series = platforms.map(k => ({ key: k, label: OG_PLATFORMS[k].label, color: OG_PLATFORMS[k].color, points: pts[k] }));
+    lineChart(canvasId, series, { xLabel: 'Date', yLabel: metric === 'servers' ? 'Servers' : 'Players online', range: '1M' });
     if (noteEl) noteEl.textContent = noteText;
   }
 
@@ -1228,7 +1071,7 @@
         </div>
         <div class="chart-panel" style="margin-top:16px">
           <h3>Servers <span class="dim">over time · all games</span> ${tip('Server count over time for every platform on one shared timeline — combining hourly recordings with Internet-Archive history.')}</h3>
-          ${canvas('an-games-time', 300)}
+          ${canvas('an-games-time', 340)}
         </div>
         <p class="dash-note" id="an-note" style="margin-top:12px"></p>`;
       _rendered.add('analysis');
@@ -1252,15 +1095,15 @@
 
     // ── Gamemode genres (servers + players) ───────────────────────────────
     const byGenreServers = topSum(_servers, s => gmGenre(s.gm), () => 1, 8);
-    barChart('an-gm-servers', byGenreServers.map(x => x[0]), byGenreServers.map(x => x[1]), BLUE, true);
+    barChart('an-gm-servers', byGenreServers.map(x => x[0]), byGenreServers.map(x => x[1]), BLUE, true, { valueTitle: 'Servers', categoryTitle: 'Genre' });
     const byGenrePlayers = topSum(_servers, s => gmGenre(s.gm), s => s.pc || 0, 8);
-    barChart('an-gm-players', byGenrePlayers.map(x => x[0]), byGenrePlayers.map(x => x[1]), BLUE, true);
+    barChart('an-gm-players', byGenrePlayers.map(x => x[0]), byGenrePlayers.map(x => x[1]), BLUE, true, { valueTitle: 'Players online', categoryTitle: 'Genre' });
 
     // ── Languages by players + raw gamemodes ──────────────────────────────
     const langP = topSum(_servers, s => (s.la || '').trim() || 'Unknown', s => s.pc || 0, 12);
-    barChart('an-lang', langP.map(x => x[0]), langP.map(x => x[1]), BLUE, true);
+    barChart('an-lang', langP.map(x => x[0]), langP.map(x => x[1]), BLUE, true, { valueTitle: 'Players online', categoryTitle: 'Language' });
     const gmRaw = topSum(_servers.filter(s => (s.pc || 0) > 0), s => (s.gm || '').trim() || 'Unknown', s => s.pc || 0, 12);
-    barChart('an-gm-raw', gmRaw.map(x => x[0].slice(0, 28)), gmRaw.map(x => x[1]), BLUE, true);
+    barChart('an-gm-raw', gmRaw.map(x => x[0].slice(0, 28)), gmRaw.map(x => x[1]), BLUE, true, { valueTitle: 'Players online', categoryTitle: 'Gamemode' });
 
     // ── Cross-game server-count comparison ────────────────────────────────
     // One bar per GAME. San Andreas stacks SA-MP + open.mp; others are single
@@ -1268,17 +1111,17 @@
     const cats = ['San Andreas'];
     const at = (cat, val) => cats.map(c => (c === cat ? val : 0));
     const datasets = [
-      { label: 'SA-MP',   color: OG_PLATFORMS.samp.color, data: at('San Andreas', t.sampServers) },
-      { label: 'open.mp', color: OG_PLATFORMS.omp.color,  data: at('San Andreas', t.ompServers) },
+      { key: 'samp', label: 'SA-MP',   color: OG_PLATFORMS.samp.color, data: at('San Andreas', t.sampServers) },
+      { key: 'omp',  label: 'open.mp', color: OG_PLATFORMS.omp.color,  data: at('San Andreas', t.ompServers) },
     ];
     otherGames.forEach(k => {
       const cat = `${OG_PLATFORMS[k].label} · ${OG_PLATFORMS[k].game}`;
       if (!cats.includes(cat)) cats.push(cat);
-      datasets.push({ label: OG_PLATFORMS[k].label, color: OG_PLATFORMS[k].color, data: cats.map(c => (c === cat ? (latest[k].servers || 0) : 0)) });
+      datasets.push({ key: k, label: OG_PLATFORMS[k].label, color: OG_PLATFORMS[k].color, data: cats.map(c => (c === cat ? (latest[k].servers || 0) : 0)) });
     });
     // Re-pad every dataset to the final cats length (cats grew as we pushed).
     datasets.forEach(d => { while (d.data.length < cats.length) d.data.push(0); });
-    stackedBar('an-games-servers', cats, datasets);
+    stackedBar('an-games-servers', cats, datasets, { valueTitle: 'Servers', categoryTitle: 'Game' });
 
     // ── Servers over time across every platform ───────────────────────────
     drawAllPlatformLines('an-games-time', document.getElementById('an-note'),

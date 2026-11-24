@@ -10,8 +10,8 @@
 <meta http-equiv="Pragma" content="no-cache" />
 <meta http-equiv="Expires" content="0" />
 <title>Mac-Andreas · Native Mac tools for open.mp</title>
-<meta name="description" content="Native Mac ports, ASI patches, ported scripts, and tools for the open.mp / SA-MP community." />
-<link rel="stylesheet" href="site/styles.css?v=202606021510" />
+<meta name="description" content="Native Mac ports, tools and live server analytics for the open.mp / SA-MP community." />
+<link rel="stylesheet" href="site/styles.css?v=202611241200" />
 <script src="site/icons.js" defer></script>
 </head>
 <body>
@@ -25,7 +25,7 @@
         Play San Andreas on macOS through CrossOver & online with native open.mp.
       </p>
       <div class="badges">
-        <span class="badge">Apps · Guides · Scripts</span>
+        <span class="badge">Dashboard · Garage</span>
         <span class="badge">Apple Silicon</span>
         <span class="badge">Open Source</span>
       </div>
@@ -36,9 +36,6 @@
 
 <nav class="site-nav site-nav-sticky" aria-label="Sections">
   <a href="#home"        class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-home"/></svg>Home</a>
-  <a href="#apps"        class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-apps"/></svg>Apps</a>
-  <a href="#guides"      class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-guides"/></svg>Guides</a>
-  <a href="#scripts"     class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-scripts"/></svg>Scripts</a>
   <a href="#dashboard"   class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-dashboard"/></svg>Dashboard</a>
   <a href="#garage"      class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-garage"/></svg>Garage</a>
   <a href="#discussions" class="site-nav-link"><svg class="nav-ico" aria-hidden="true"><use href="#ico-discussions"/></svg>Discussions</a>
@@ -56,40 +53,10 @@
     </div>
 
     <div class="home-grid">
-      <a href="#apps" class="home-card home-card-apps" data-route="apps">
-        <span class="home-tag">Apps</span>
-        <h3>macOS <span class="accent">Applications</span></h3>
-        <p class="home-summary">Native, Apple-Silicon ports of the open.mp toolchain.</p>
-        <div class="home-stat">
-          <strong id="home-apps-count">4</strong><small>shipping</small>
-        </div>
-        <span class="home-cta">Browse apps →</span>
-      </a>
-
-      <a href="#guides" class="home-card home-card-guides" data-route="guides">
-        <span class="home-tag">Guides</span>
-        <h3>Tutorials &amp; <span class="accent">how-tos</span></h3>
-        <p class="home-summary">Step-by-step setup, porting, and CrossOver workflow notes.</p>
-        <div class="home-stat">
-          <strong id="home-guides-count">4</strong><small>guides</small>
-        </div>
-        <span class="home-cta">Read guides →</span>
-      </a>
-
-      <a href="#scripts" class="home-card home-card-scripts" data-route="scripts">
-        <span class="home-tag">Scripts</span>
-        <h3>SAMP → <span class="accent">open.mp</span></h3>
-        <p class="home-summary">Filterscripts and gamemodes ported across.</p>
-        <div class="home-stat">
-          <strong id="home-scripts-count">—</strong><small>ports</small>
-        </div>
-        <span class="home-cta">Open scripts →</span>
-      </a>
-
       <a href="#garage" class="home-card home-card-garage" data-route="garage">
         <span class="home-tag">Garage</span>
         <h3>The <span class="accent">toolchain</span></h3>
-        <p class="home-summary" id="home-repo-summary">Every open.mp tool we maintain on GitHub.</p>
+        <p class="home-summary" id="home-repo-summary">Every Mac-Andreas repository on GitHub.</p>
         <div class="home-stat">
           <strong id="home-repos-count">—</strong><small>repos</small>
         </div>
@@ -118,72 +85,6 @@
     </div>
   </section>
 
-  <!-- ===== Apps ===== -->
-  <section id="apps">
-    <div class="section-head">
-      <h2>macOS <span class="accent">Applications</span></h2>
-      <span class="meta">Apple Silicon Native</span>
-    </div>
-    <div id="apps-grid"></div>
-    <p class="meta" id="apps-updated"></p>
-  </section>
-
-  <!-- ===== Guides (tutorials / how-tos) ===== -->
-  <section id="guides">
-    <div class="section-head">
-      <h2>Tutorials &amp; <span class="accent">Guides</span></h2>
-      <span class="meta">Get started · macOS</span>
-    </div>
-    <p class="section-intro">
-      Four short tutorials, in order, to go from a clean Mac to a running
-      open.mp server with a connected client — and a modern editing setup.
-    </p>
-
-    <div class="card-grid">
-      <a class="card guide-static-card" href="guide.html?id=1">
-        <span class="card-tag">Tutorial 01</span>
-        <h3>Set up an <span class="accent">open.mp server</span></h3>
-        <p class="card-summary">Spin up a local open.mp server on macOS and connect from the launcher.</p>
-        <span class="card-cta">Start →</span>
-      </a>
-      <a class="card guide-static-card" href="guide.html?id=2">
-        <span class="card-tag">Tutorial 02</span>
-        <h3>Install the <span class="accent">launcher</span></h3>
-        <p class="card-summary">Walks through the v1.6.3-arm.1 release of the open.mp Launcher for Apple silicon.</p>
-        <span class="card-cta">Install →</span>
-      </a>
-      <a class="card guide-static-card" href="guide.html?id=3">
-        <span class="card-tag">Tutorial 03</span>
-        <h3>CrossOver <span class="accent">setup</span></h3>
-        <p class="card-summary">Get the game running under CrossOver, downgrade to v1.0, fix the spinning-mouse bug.</p>
-        <span class="card-cta">Set up →</span>
-      </a>
-      <a class="card guide-static-card" href="guide.html?id=4">
-        <span class="card-tag">Tutorial 04</span>
-        <h3>open.mp Pawn in <span class="accent">VS Code</span></h3>
-        <p class="card-summary">A modern Pawn editing + compile workflow in VS Code on macOS — no Pawno, no Wine.</p>
-        <span class="card-cta">Set up →</span>
-      </a>
-    </div>
-  </section>
-
-  <!-- ===== Scripts (SA-MP -> open.mp pawn ports) ===== -->
-  <section id="scripts">
-    <div class="section-head">
-      <h2>SAMP &rarr; <span class="accent">open.mp</span></h2>
-      <span class="meta">Auto-featured · Tagged repos</span>
-    </div>
-    <p class="section-intro">
-      Filterscripts and gamemodes ported from the SA-MP API surface to
-      open.mp, maintained as open-source repositories under Mac-Andreas.
-      Drop them into <code>filterscripts/</code> or <code>gamemodes/</code>
-      and compile with the modern open.mp Pawn compiler. Each port carries
-      its own open-source <strong>LICENSE</strong> &mdash; original authors
-      are credited in the repository.
-    </p>
-    <div id="scripts-grid" class="card-grid"></div>
-  </section>
-
   <!-- ===== Dashboard ===== -->
   <!-- Live open.mp / SA-MP server analytics. Reads api.open.mp/servers and
        geojs.io directly in the browser — no Supabase, no API key. Live snapshot
@@ -196,14 +97,18 @@
       <span class="meta">open.mp + SA-MP · Live snapshot from <code>api.open.mp</code></span>
     </div>
 
-    <!-- "Is SA-MP dead?" verdict banner. Loading → answer reads "Wait for it…";
-         once data is in: >1 SA-MP player ⇒ "No.", else "Yes." -->
+    <!-- "Is SA-MP dead?" verdict banner. The answer is the rounded No | Yes box
+         on the right: >1 SA-MP player ⇒ "No" lights up, else "Yes". Both stay
+         dimmed (pulsing) while loading. -->
     <div id="samp-verdict" class="samp-verdict" data-state="loading">
-      <div class="samp-verdict-main">
+      <div class="samp-verdict-body">
         <span class="samp-verdict-q">Is SA-MP dead?</span>
-        <span class="samp-verdict-a" id="samp-verdict-a"><span class="verdict-wait">Wait for it…</span></span>
+        <div class="samp-verdict-sub" id="samp-verdict-sub">Counting live SA-MP players…</div>
       </div>
-      <div class="samp-verdict-sub" id="samp-verdict-sub">Counting live SA-MP players…</div>
+      <div class="samp-verdict-box" id="samp-verdict-a" role="img" aria-label="Answer: still counting">
+        <span class="sv-opt sv-no">No</span>
+        <span class="sv-opt sv-yes">Yes</span>
+      </div>
     </div>
 
     <!-- Sub-tabs -->
@@ -221,7 +126,7 @@
     <div id="dash-panels"></div>
   </section>
 
-  <!-- ===== Garage (topic-tagged repos) ===== -->
+  <!-- ===== Garage — every public Mac-Andreas repo (site/repos.js) ===== -->
   <section id="garage">
     <div class="section-head">
       <h2>The <span class="accent">Garage</span></h2>
@@ -320,9 +225,9 @@
 
       <article class="legal-card">
         <div class="legal-card-num">04</div>
-        <div class="legal-card-tag">Guides &amp; tools</div>
+        <div class="legal-card-tag">Tools</div>
         <h2>Use your own copy.</h2>
-        <p>The <a href="#guides">guides</a> assume a <strong>legally-owned copy</strong> of GTA: San Andreas. Every third-party tool referenced (CrossOver, Rockstar Games Launcher, SA-MP, downgrade tools) is linked to its official source. No Take-Two binaries, game assets, or copyrighted code are hosted or redistributed here.</p>
+        <p>The tools in the <a href="#garage">garage</a> assume a <strong>legally-owned copy</strong> of GTA: San Andreas. Every third-party tool referenced (CrossOver, Rockstar Games Launcher, SA-MP, downgrade tools) is linked to its official source. No Take-Two binaries, game assets, or copyrighted code are hosted or redistributed here.</p>
       </article>
 
       <article class="legal-card">
@@ -371,12 +276,10 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js" defer></script>
-<script src="site/config.js" defer></script>
-<script src="site/apps.js" defer></script>
-<script src="site/servers.js?v=202606021510" defer></script>
-<script src="site/repos.js" defer></script>
+<script src="site/chart-kit.js?v=202611241200" defer></script>
+<script src="site/servers.js?v=202611241200" defer></script>
+<script src="site/repos.js?v=202611241200" defer></script>
 <script src="site/discussions.js" defer></script>
-<script src="site/scripts.js" defer></script>
 <script src="site/section-nav.js?v=202606021510" defer></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 # mac-andreas.github.io
 
-**Mac-Andreas** — native macOS tools, guides, and scripts for the open.mp / SA-MP community.
+**Mac-Andreas** — native macOS tools and live server analytics for the open.mp / SA-MP community.
 
 🌐 **Live site:** [mac-andreas.github.io](https://mac-andreas.github.io)
 
@@ -10,11 +10,8 @@
 
 | Section | Description |
 |---|---|
-| **Apps** | Native Apple Silicon builds of open.mp tools (launcher, Qawno, server launcher) |
-| **Guides** | Step-by-step tutorials: server setup, launcher install, CrossOver configuration |
-| **Scripts** | SA-MP filterscripts & gamemodes ported to open.mp (auto-fetched by topic tag) |
-| **Dashboard** | Anonymous opt-in usage telemetry, visualised per-app |
-| **Garage** | All repositories tagged `mac-andreas-project` on GitHub, live snapshot |
+| **Dashboard** | Live open.mp + SA-MP server analytics (Live Servers, Trends, Server Analysis, Breakdown, Geography, Benchmarking, Sources, Embed) |
+| **Garage** | Every public repository in the [Mac-Andreas](https://github.com/Mac-Andreas) GitHub org |
 | **Discussions** | Community threads from the GitHub Discussions board |
 
 ---
@@ -23,54 +20,51 @@
 
 ```
 index.html                  Main site (single-page, section-based)
-guide.html                  Tutorial detail page
-app.html                    App detail page
-dashboard/
-  config.js                 App registry + Supabase view names
-  stats.js                  Shared stats.json accessor (window.MA_STATS)
-  repos.js                  Garage grid renderer (reads data/pinned.json)
-  app.js                    Per-app dashboard panels + Chart.js charts
-  landing.js                Home card grid renderer
+site/
+  chart-kit.js              Shared chart layer: per-chart Customize + Export,
+                            type chips and date-range slider on time series
+  servers.js                Dashboard data + tabs (api.open.mp, history files)
+  repos.js                  Garage grid (GitHub API, falls back to data/garage.json)
   discussions.js            Community board renderer
-  scripts.js                Scripts section renderer
-  home.js                   Home stats counters
-  section-nav.js            Sticky nav active-section tracker
-  guide-detail.js           Tutorial page renderer
-  app-detail.js             App page renderer
+  section-nav.js            Hash router for the single-page sections
   icons.js                  Inline SVG icon sprite
   styles.css                Site-wide styles (GTA SA car-culture theme)
 data/
-  pinned.json               Repo snapshot (refreshed daily by Actions)
-  stats.json                App telemetry snapshot (refreshed every 3h by Actions)
-  scripts.json              Script repo snapshot (refreshed daily by Actions)
-  discussions.json          Community thread snapshot (refreshed daily by Actions)
-scripts/
-  fetch-pinned-repos.mjs    Fetches repos tagged `mac-andreas-project` → data/pinned.json
-  fetch-stats.mjs           Fetches Supabase aggregate views → data/stats.json
-  fetch-scripts.mjs         Fetches repos tagged `openmp-script-port` → data/scripts.json
-  fetch-discussions.mjs     Fetches GitHub Discussions → data/discussions.json
+  server-history.json       SA-MP / open.mp history (Internet Archive + live snapshots)
+  othergames-history.json   Cross-game history (RAGE:MP, MTA:SA, VC:MP …)
+  garage.json               Fallback snapshot of the org's public repos
+  discussions.json          Community thread snapshot
 assets/
-  hero/banner.webp          Hero banner image
+  hero/                     Hero banner images
+  geo/world-countries.json  Borderless basemap for the Geography tab
 ```
+
+---
+
+## Dashboard charts
+
+Every chart goes through `site/chart-kit.js`, which gives it:
+
+- **Customize** (sliders icon): sort, show/hide categories, line type / stroke /
+  width / points / fill, date + time on hover, axis position (X top/bottom,
+  Y left/right), show/hide dates and axis labels, axis titles, grid lines,
+  diagonal labels, weekday above the date, colour theme, background / grid /
+  text / axis colours and every line, bar or slice colour.
+- **Export** (download icon): PNG with the chart background, or transparent.
+- **Time-series lines** also get type chips (click = show/hide, Alt/⌥-click =
+  only that one, hover = highlight) and a date-range slider with 1D…All presets.
+
+Appearance choices persist per chart in `localStorage`; the date window resets to
+the chart's default on each visit (Trends: 1 week, other time charts: 1 month).
 
 ---
 
 ## How the Garage works
 
-Repositories appear in **The Garage** section automatically when they carry the
-[`mac-andreas-project`](https://github.com/search?q=topic:mac-andreas-project+user:Mac-Andreas)
-GitHub topic. The daily `refresh-repos.yml` workflow runs `scripts/fetch-pinned-repos.mjs`
-which queries the GitHub Search API and commits the result to `data/pinned.json`.
-
-To add a repo: go to the repo on GitHub → About → Topics → add `mac-andreas-project`.
-
----
-
-## Adding another app to the Dashboard
-
-1. Create Supabase views named `<slug>_app_dau`, `<slug>_app_wau`, etc. (copy the pattern from existing views).
-2. Append an entry to `dashboard/config.js`'s `apps` array with `slug`, `display`, `platform`, `tagline`, `repo`, and `views`.
-3. Update `scripts/fetch-stats.mjs` to include the new slug.
+The Garage lists every **public** repository in the Mac-Andreas org, read live from
+`https://api.github.com/orgs/Mac-Andreas/repos` in the browser (cached for an hour
+per session). If the API is unreachable or rate-limited, it falls back to the
+committed `data/garage.json` snapshot. New public repos appear automatically.
 
 ---
 

@@ -1,6 +1,6 @@
 // Injects the shared SVG icon sprite into the page so nav + footer links can
 // reference icons via <use href="#ico-…">. One source of truth across
-// index.html, app.html, and guide.html. Stroke icons inherit currentColor;
+// index.html. Stroke icons inherit currentColor;
 // the GitHub mark is a filled path.
 (() => {
   if (document.getElementById('ma-icon-sprite')) return;
@@ -8,16 +8,6 @@
 <svg id="ma-icon-sprite" width="0" height="0" style="position:absolute" aria-hidden="true" focusable="false">
   <symbol id="ico-home" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <path d="M3 11l9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 21v-6h6v6"/>
-  </symbol>
-  <symbol id="ico-apps" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
-    <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
-  </symbol>
-  <symbol id="ico-scripts" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <polyline points="8 7 3 12 8 17"/><polyline points="16 7 21 12 16 17"/>
-  </symbol>
-  <symbol id="ico-guides" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M4 5a2 2 0 0 1 2-2h12v18H6a2 2 0 0 1-2-2z"/><path d="M8 3v18"/>
   </symbol>
   <symbol id="ico-dashboard" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
     <line x1="6" y1="20" x2="6" y2="12"/><line x1="12" y1="20" x2="12" y2="6"/><line x1="18" y1="20" x2="18" y2="14"/>

@@ -357,12 +357,15 @@ main > section[id] > .section-head:first-child { margin-top: 0; }
 }
 .legal-card p strong { color: var(--text); font-weight: 600; }
 .legal-card p em { color: var(--sand); font-style: italic; }
-.legal-card a {
+/* Inline links in card copy only — the action buttons (.dl-btn) in
+   .legal-card-actions keep their own colours (this rule used to override them,
+   leaving "Open an issue" as orange text on an orange button). */
+.legal-card p a {
   color: var(--ember);
   text-decoration: none;
   border-bottom: 1px dashed rgba(232,114,28,0.55);
 }
-.legal-card a:hover { color: var(--sand); border-bottom-color: var(--sand); }
+.legal-card p a:hover { color: var(--sand); border-bottom-color: var(--sand); }
 .legal-card-foot {
   margin-top: 6px;
   padding-top: 10px;
@@ -1339,7 +1342,9 @@ body.embed-mode #dashboard .section-head { margin-top: 8px; }
 .live-word { font-family: Impact, Oswald, sans-serif; font-style: italic; letter-spacing: 1px; color: var(--good); font-size: 13px; }
 .live-sub { font-size: 12px; color: var(--text); letter-spacing: 0.3px; }
 .dl-btn { cursor: pointer; }
-.dl-btn:hover { border-color: var(--ember); color: var(--ember); }
+/* Embed-tab buttons (.dash-select.dl-btn) only — unscoped, this turned the
+   orange .dl-btn's text orange-on-orange on hover. */
+.dash-select.dl-btn:hover { border-color: var(--ember); color: var(--ember); }
 
 /* Trends range buttons — right-aligned, wrapping to the right edge. */
 #trend-range-btns { margin-left: auto; justify-content: flex-end; }
